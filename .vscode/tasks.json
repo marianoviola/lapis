@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Lapis: Compile",
+			"type": "shell",
+			"command": "npx",
+			"args": ["--yes", "pnpm@10", "run", "compile"],
+			"options": { "cwd": "${workspaceFolder}" },
+			"problemMatcher": ["$tsc", "$eslint-stylish"],
+			"group": { "kind": "build", "isDefault": true }
+		}
+	]
+}

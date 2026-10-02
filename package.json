@@ -1,0 +1,83 @@
+{
+  "name": "lapis",
+  "displayName": "Lapis",
+  "description": "Lightweight knowledge navigation and structured views for plain Markdown workspaces.",
+  "version": "0.0.1",
+  "packageManager": "pnpm@10.34.6",
+  "engines": {
+    "vscode": "^1.140.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": ["onLanguage:markdown", "workspaceContains:**/*.md"],
+  "extensionKind": ["workspace"],
+  "capabilities": {
+    "untrustedWorkspaces": { "supported": true },
+    "virtualWorkspaces": { "supported": false }
+  },
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "lapis.openNote",
+        "title": "Open Note",
+        "category": "Lapis"
+      },
+      {
+        "command": "lapis.rebuildIndex",
+        "title": "Rebuild Index",
+        "category": "Lapis"
+      }
+    ],
+    "configuration": {
+      "title": "Lapis",
+      "properties": {
+        "lapis.excludedFolders": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "default": [".git", "node_modules", "dist", "out", ".vscode-test"],
+          "scope": "resource",
+          "description": "Directory names to exclude from the note index at any depth. Independent of Explorer and search exclusions."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run package",
+    "compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest:integration": "pnpm run compile-tests && pnpm run compile",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run tests",
+    "test:integration": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.2.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "24.x",
+    "@types/vscode": "^1.140.0",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.0.0",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.5.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.1",
+    "vitest": "^5.0.3"
+  },
+  "overrides": {
+    "diff": "^8.0.4",
+    "serialize-javascript": "^7.0.6"
+  },
+  "dependencies": {
+    "markdown-it": "^14.3.2",
+    "yaml": "^2.9.1"
+  }
+}
