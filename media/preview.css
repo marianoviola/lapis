@@ -2,6 +2,12 @@
 	font-size: 0.9em;
 }
 
+mark {
+	color: var(--vscode-editor-foreground);
+	background-color: var(--vscode-editor-findMatchHighlightBackground);
+	outline: 1px solid var(--vscode-editor-findMatchHighlightBorder, transparent);
+}
+
 .lapis-task-list-item {
 	list-style-type: none;
 }

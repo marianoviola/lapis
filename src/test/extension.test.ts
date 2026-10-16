@@ -205,6 +205,48 @@ suite('Lapis Extension Host', () => {
 		}
 	});
 
+	test('renders highlight and footnotes inside and outside vaults without changing documents', async () => {
+		for (const uri of [
+			vscode.Uri.joinPath(root, 'Preview syntax.md'),
+			vscode.Uri.joinPath(vscode.workspace.workspaceFolders![3].uri, 'Preview syntax.md'),
+		]) {
+			created.add(uri.toString());
+			await vscode.workspace.fs.writeFile(uri, Buffer.from('==Highlighted==[^a]\n\n[^a]: **Footnote**\n'));
+			const document = await vscode.workspace.openTextDocument(uri);
+			const original = document.getText();
+			const dirty = document.isDirty;
+			const html = await vscode.commands.executeCommand<string>('markdown.api.render', document);
+			assert.ok(html?.includes('<mark>Highlighted</mark>'), html);
+			assert.ok(html?.includes('<strong>Footnote</strong>'), html);
+			assert.ok(html?.includes('href="#fn1"'), html);
+			assert.ok(html?.includes('href="#fnref1"'), html);
+			assert.equal(document.getText(), original);
+			assert.equal(document.isDirty, dirty);
+		}
+	});
+
+	test('preserves footnote IDs, environment and cached tokens when reparsing wikilinks', () => {
+		const markdown = api.extendMarkdownIt(new MarkdownIt());
+		const text = '- [x] ==[[Welcome|Go]]==[^a] again[^a] inline^[Inline [[Welcome|Note]]].\n\n[^a]: Definition [[Welcome|Target]]\n';
+		const env = {};
+		const tokens = markdown.parse(text, env);
+		const original = JSON.stringify({ tokens, env });
+		for (let iteration = 0; iteration < 2; iteration++) {
+			const html = markdown.renderer.render(tokens, markdown.options, {
+				...env, currentDocument: vscode.Uri.joinPath(root, 'Welcome.md'),
+			});
+			assert.ok(html.includes('>Go</a></mark>'), html);
+			assert.ok(html.includes('>Target</a>'), html);
+			assert.ok(html.includes('>Note</a>'), html);
+			assert.ok(html.includes('type="checkbox"'));
+			assert.ok(html.includes('id="fnref1"'));
+			assert.ok(html.includes('id="fnref1:1"'));
+			assert.ok(html.includes('id="fnref2"'));
+			assert.ok(!html.includes('id="fnref3"'));
+			assert.equal(JSON.stringify({ tokens, env }), original);
+		}
+	});
+
 	test('preserves cached native tokens, automatic links and formatting when rendering wikilinks', () => {
 		const markdown = api.extendMarkdownIt(new MarkdownIt({ linkify: true, typographer: true }));
 		const text = '[[Welcome|Go]] https://example.com "quote" [reference][id]\n\n[id]: https://example.com/ref';
