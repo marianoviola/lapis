@@ -15,7 +15,7 @@ export function parseNote(source: NoteSource): NoteRecord {
 		if (token.type === 'heading_open') {
 			const inline = tokens[position + 1];
 			const text = (inline.children ?? []).map(child => {
-				if (child.type === 'lapislazuli_wikilink') {
+				if (child.type === 'lapis_wikilink') {
 					const link = child.meta as NoteLink;
 					return link.label ?? link.target;
 				}
@@ -24,7 +24,7 @@ export function parseNote(source: NoteSource): NoteRecord {
 			headings.push(Object.freeze({ text, level: Number(token.tag.slice(1)), line: (token.map?.[0] ?? 0) + frontmatter.bodyLine }));
 		}
 		for (const child of token.children ?? []) {
-			if (child.type === 'lapislazuli_wikilink') {
+			if (child.type === 'lapis_wikilink') {
 				links.push(Object.freeze({ ...child.meta as NoteLink }));
 			}
 		}
