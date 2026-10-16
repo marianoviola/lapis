@@ -12,6 +12,8 @@
 
 ### Changed
 
+- Use the theme's normal text colour for source-editor blockquote prose,
+  preserving quote markers, code, links and emphasis without changing settings.
 - Restyle ordinary preview blockquotes with a link-coloured left bar, subtle
   background tint and tighter spacing, with high-contrast theme support.
 - Rename the extension back to Lapis: package `lapis`, commands and settings

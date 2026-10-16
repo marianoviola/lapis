@@ -50,6 +50,11 @@ Implemented:
 	are not marked as missing while attachment resolution remains undefined.
 	A resolved note with a missing heading still uses the link colour, matching
 	navigation's fallback to the top of the note.
+- Blockquote prose in the source editor uses the active theme's normal text
+	colour instead of the quote syntax colour. Quote markers, code, links and
+	wikilinks retain their own colours; bold and italic formatting is unchanged.
+	This also applies outside vaults and updates as you type, without editing
+	the document or changing VS Code settings.
 - The native Markdown preview hides a closed YAML frontmatter preamble, even
 	when the YAML is invalid. Metadata stays editable in the source and available
 	in the index; diagnostics are unchanged. An unclosed preamble remains visible.
