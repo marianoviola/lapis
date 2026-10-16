@@ -14,7 +14,7 @@ the vault, and no webview may parse or write Markdown.
 | `src/preview` | Resolver-backed wikilink rendering and native preview environment/refresh adapter. |
 | `src/index` | Pure note parser/index plus a VS Code event/filesystem adapter. |
 | `src/navigation` | Native Quick Pick over shared records. |
-| `src/language` | Native document links, definitions and ambiguity hovers. |
+| `src/language` | Native document links, definitions, ambiguity hovers and wikilink completion. |
 | `src/extension.ts` | Composition, command registration, read-only API. |
 
 The pure index has no VS Code dependency. URI strings are identity; root-scoped
@@ -36,6 +36,17 @@ endings, so identical text inside code spans cannot steal a link's range.
 Language providers use the shared index and synchronize open document versions
 before serving requests. Document link targets resolve lazily when first
 followed, using the current target headings rather than a parsing-time URI.
+
+Completion uses the shared tokenizer to validate a temporary completed reference
+at the cursor, excluding code, escaped syntax and frontmatter without changing
+the document. Suggestions use current indexed records, synchronize open buffers,
+and validate candidate targets with the same resolver before choosing the
+shortest uniquely resolving reference. Existing aliases and closing delimiters
+are included in the replacement. Incomplete completion lists are regenerated as
+the user types so title/path search is applied to the current query. No separate
+file scan, note catalog, creation or save operation is introduced.
+The resolver strips one optional `.md` extension from references, while index
+keys are already canonical; repeated suffixes in filenames are preserved.
 
 The exported `extendMarkdownIt` hook hides closed frontmatter in the native
 preview by replacing its preamble with blank lines before block parsing. This
@@ -71,7 +82,7 @@ namespace; independent vaults remain isolated.
 
 ## Planned Boundaries
 
-- **Additional language providers:** completion and later references share the
+- **Additional language providers:** references will share the
   resolver. A native TreeView exposes current-note backlinks.
 - **Mutation service:** re-read the current document, validate the expected
   revision, plan source-token/YAML-aware edits, and use `WorkspaceEdit`. Preserve

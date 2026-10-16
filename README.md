@@ -35,6 +35,12 @@ Implemented:
 - Wikilinks support **Cmd/Ctrl+click** and **F12** in the Markdown source editor,
 	including heading destinations and unsaved buffers. Ambiguous links show a
 	hover listing candidates instead of guessing a destination.
+- Type **`[[`** to search indexed notes by title or path, then accept a suggestion
+	to insert the shortest uniquely resolving target. Type **`#`** inside a
+	wikilink to complete the target's headings (`[[#` uses the current note).
+	**Ctrl+Space** also opens suggestions. Completion stays within the same vault,
+	preserves existing aliases/closing brackets, and ignores code and metadata.
+	Only the active buffer is edited when you accept; no note is created or saved.
 - The native Markdown preview hides a closed YAML frontmatter preamble, even
 	when the YAML is invalid. Metadata stays editable in the source and available
 	in the index; diagnostics are unchanged. An unclosed preamble remains visible.
@@ -115,7 +121,9 @@ Unit tests cover parsing, link resolution, backlinks, and index races.
 Integration tests launch a separate Extension Host against a temporary vault;
 they cover marker discovery and lifecycle, multi-root namespace sharing and
 isolation, index exclusions, native wikilink navigation, preview metadata
-hiding, heading IDs, encoded preview URLs and target lifecycle changes.
+hiding, heading IDs, encoded preview URLs, target lifecycle changes and native
+completion ranges/unsaved headings. Completion unit tests include a 10,000-note
+fixture with a measured generation threshold of 50 ms.
 Actual webview clicks and theme appearance also need a manual F5 check.
 The runner removes its fixture on exit and
 uses an isolated VS Code profile.
@@ -133,8 +141,7 @@ runtime.
 ## Next Slices
 
 See [the architecture and implementation sequence](docs/architecture.md).
-Next is editor completion,
-followed by backlinks UI and practical rename safety, frontmatter mutations,
+Next are backlinks UI and practical rename safety, frontmatter mutations,
 Bases/Table, Kanban, Timeline, reminders, and bounded note embedding.
 
 ## Install In An Existing VS Code Window
