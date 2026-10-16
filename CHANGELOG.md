@@ -4,6 +4,14 @@
 
 ### Added
 
+- Explicit Markdown table formatting, column alignment and row/column operations,
+  available through commands, Code Actions and the editor context menu, inside
+  and outside vaults. Preserve source content and edit only the target table
+  with one undo step; use full display-width padding without a cap.
+- **Lapis: Insert Wikilink** with a dedicated note picker, optional heading and
+  editable alias, selected-text alias defaults and table-safe alias separators.
+  Reuse the vault index and resolver; cancellation and obsolete source/target
+  checks prevent unintended edits.
 - Read-only GFM task-list checkboxes in the native Markdown preview, including
   nested and ordered lists and task labels containing wikilinks.
 - Theme-aware `==highlights==`, referenced footnotes and inline footnotes in
@@ -12,6 +20,9 @@
 
 ### Changed
 
+- Treat commands as the primary content-authoring interface. Wikilink editor
+  completion is now opt-in via `lapis.wikilinkCompletion` (default `false`);
+  VS Code and Copilot suggestion settings remain untouched.
 - Use the theme's normal text colour for source-editor blockquote prose,
   preserving quote markers, code, links and emphasis without changing settings.
 - Restyle ordinary preview blockquotes with a link-coloured left bar, subtle

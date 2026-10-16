@@ -35,12 +35,17 @@ Implemented:
 - Wikilinks support **Cmd/Ctrl+click** and **F12** in the Markdown source editor,
 	including heading destinations and unsaved buffers. Ambiguous links show a
 	hover listing candidates instead of guessing a destination.
-- Type **`[[`** to search indexed notes by title or path, then accept a suggestion
-	to insert the shortest uniquely resolving target. Type **`#`** inside a
-	wikilink to complete the target's headings (`[[#` uses the current note).
-	**Ctrl+Space** also opens suggestions. Completion stays within the same vault,
-	preserves existing aliases/closing brackets, and ignores code and metadata.
-	Only the active buffer is edited when you accept; no note is created or saved.
+- **Lapis: Insert Wikilink** opens a dedicated note picker, then offers headings
+	and an optional alias. Selected text is proposed as the alias; existing aliases
+	are editable. Empty alias means no alias; Esc at any step makes no edit.
+	Targets use the shortest uniquely resolving reference within the same vault,
+	including unsaved headings. Aliases inside tables use `\|`. Code and metadata
+	are excluded. Only the active buffer is edited, with one undo step; no note is
+	created or saved.
+- Editor completion is optional and **off by default**, so Lapis does not compete
+	with VS Code or Copilot suggestions. Enable `lapis.wikilinkCompletion` to use
+	`[[`, `#` and **Ctrl+Space** completion. It preserves existing aliases/closing
+	brackets and uses the same index and resolver as the dedicated command.
 - Wikilinks in the source editor use theme-aware colours: resolved targets use
 	the link colour, missing notes use the warning colour with a dotted underline,
 	and ambiguous targets use the info colour with a dashed underline. The entire
@@ -84,8 +89,37 @@ Implemented:
 	ambiguous links have a dashed underline and list candidates in their tooltip.
 	Colours follow the VS Code theme. Target changes refresh open previews.
 
-Lapis does not write or reformat your notes in this milestone. There is no
-database, hidden vault metadata, graph view, or proprietary note format.
+Lapis never automatically rewrites or saves notes. Explicit authoring commands
+edit the active buffer only. There is no database, hidden vault metadata, graph
+view, or proprietary note format.
+
+## Content Authoring
+
+Commands are the primary authoring interface for Lapis: tables and wikilinks now,
+and callouts in a future slice. Completion is an optional aid, not the main
+workflow. Changes are explicit, undoable and never automatically saved.
+
+### Markdown Tables
+
+Place a single cursor inside an existing table and use the Command Palette,
+**Ctrl+.**, or the **Lapis: Table** editor context submenu:
+
+- **Format Table** and **Align Column Left/Center/Right**.
+- **Insert Table Row Above/Below** and **Delete Table Row**.
+- **Insert Table Column Left/Right** and **Delete Table Column**.
+
+These commands work in any Markdown buffer, including untitled documents and
+notes outside vaults. They change only the target table, preserve its container
+prefixes and line endings, keep the cursor in a logical cell, and use one undo
+step. Formatting is idempotent and pads to the widest cell without a width cap
+or content truncation; CJK and emoji display widths are considered.
+
+Escaped pipes and pipes inside code spans are preserved. Native GFM previews
+still require escaped pipes inside code spans to render those cells correctly.
+Code fences and frontmatter are excluded. The header/separator and last column
+cannot be deleted. Lapis registers no document formatter and performs no
+format-on-save. Creating a new table is a separate, not-yet-implemented command
+(#15).
 
 ## Try It
 

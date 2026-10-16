@@ -14,7 +14,8 @@ the vault, and no webview may parse or write Markdown.
 | `src/preview` | Resolver-backed wikilink rendering and native preview environment/refresh adapter. |
 | `src/index` | Pure note parser/index plus a VS Code event/filesystem adapter. |
 | `src/navigation` | Native Quick Pick over shared records. |
-| `src/language` | Native document links, definitions, ambiguity hovers, completion and resolver-backed editor decorations. |
+| `src/language` | Native document links, definitions, ambiguity hovers, dedicated wikilink insertion, optional completion and editor decorations. |
+| `src/tables` | Pure table edits plus explicit commands, Code Actions and context-menu integration. |
 | `src/extension.ts` | Composition, command registration, read-only API. |
 
 The pure index has no VS Code dependency. URI strings are identity; root-scoped
@@ -47,6 +48,21 @@ the user types so title/path search is applied to the current query. No separate
 file scan, note catalog, creation or save operation is introduced.
 The resolver strips one optional `.md` extension from references, while index
 keys are already canonical; repeated suffixes in filenames are preserved.
+
+Commands are the primary content-authoring interface, including future callout
+authoring. Wikilink insertion uses an independent Quick Pick rather than the
+editor completion widget; completion is disabled by default and opt-in through
+`lapis.wikilinkCompletion`. Note, optional heading and alias choices precede a
+single buffer edit. The source version/selection and current destination are
+checked after prompts, so cancellation or obsolete inputs do not modify notes.
+Selected text supplies the alias default, and table aliases escape the pipe.
+
+Table operations use markdown-it source maps for detection and a pure cell model
+for escaped pipes, code spans, alignment and display-width padding. Commands
+replace only the target table, preserve EOL/container prefixes, and restore a
+logical cursor position. Code Actions carry source URI/version guards. There is
+no document formatter or automatic save, and table commands have no vault
+dependency.
 
 Editor decorations reuse indexed occurrence ranges and resolver states rather
 than parsing Markdown again. Only visible, local Markdown editors whose buffer
