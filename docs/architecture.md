@@ -81,3 +81,18 @@ and a proven timeline library are deferred until their respective slices.
 
 No graph view, persistent index database, full formula language, background
 daemon, or replacement Markdown editor is planned.
+
+## Vault Registry (Implemented Foundation)
+
+`src/vault/vaults.ts` is a pure registry of directory URIs containing `.lapis`
+markers. The host supplies discovery results through atomic `replace()` calls.
+For a file, `resolve()` returns marked ancestor directories nearest first,
+the topmost marked directory as `rootUri`, and its relative file path.
+Independent roots and URI authorities retain separate link namespaces;
+workspace folder boundaries do not affect this calculation.
+
+The registry performs no filesystem access or configuration parsing. It is not
+yet connected to `WorkspaceIndex`: current workspace-wide indexing is unchanged.
+Discovery, marker watching and configuration diagnostics are the next adapter
+slice. Whether to discover markers above workspace folders and the configuration
+format remain open decisions. No configuration inheritance keys ship yet.
