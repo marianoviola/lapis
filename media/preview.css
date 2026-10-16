@@ -12,6 +12,29 @@
 	accent-color: var(--vscode-textLink-foreground);
 }
 
+.lapis-task-checkbox:checked {
+	appearance: none;
+	position: relative;
+	width: 13px;
+	height: 13px;
+	border: 1px solid var(--vscode-textLink-foreground);
+	border-radius: 2px;
+	background-color: var(--vscode-textLink-foreground);
+	opacity: 1;
+}
+
+.lapis-task-checkbox:checked::after {
+	content: "";
+	position: absolute;
+	left: 3px;
+	top: 0;
+	width: 3px;
+	height: 7px;
+	border: solid var(--vscode-editor-background);
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+}
+
 .lapis-wikilink-missing {
 	color: var(--vscode-editorWarning-foreground);
 	text-decoration: underline dotted;
