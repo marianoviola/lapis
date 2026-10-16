@@ -11,6 +11,19 @@ export interface NoteLink {
 	readonly embed: boolean;
 }
 
+/** UTF-16 offsets in the original document; end is exclusive. */
+export interface SourceRange {
+	readonly start: number;
+	readonly end: number;
+}
+
+export interface NoteLinkOccurrence extends NoteLink {
+	readonly range: SourceRange;
+	readonly targetRange: SourceRange;
+	readonly headingRange?: SourceRange;
+	readonly labelRange?: SourceRange;
+}
+
 export interface Heading {
 	readonly text: string;
 	readonly level: number;
@@ -41,7 +54,7 @@ export interface NoteRecord {
 	readonly title: string;
 	readonly properties: Properties;
 	readonly headings: readonly Heading[];
-	readonly links: readonly NoteLink[];
+	readonly links: readonly NoteLinkOccurrence[];
 	readonly issues: readonly NoteIssue[];
 	readonly dirty: boolean;
 	readonly documentVersion?: number;

@@ -1,6 +1,10 @@
 import MarkdownIt from 'markdown-it';
 import { NoteLink } from '../domain/note';
 
+export interface WikilinkToken extends NoteLink {
+	readonly inlineOffset: number;
+}
+
 export function wikilinks(markdown: MarkdownIt): void {
 	markdown.inline.ruler.before('link', 'lapis_wikilink', (state, silent) => {
 		if ('linkLevel' in state && typeof state.linkLevel === 'number' && state.linkLevel > 0) {
@@ -26,7 +30,8 @@ export function wikilinks(markdown: MarkdownIt): void {
 			token.meta = {
 				target, heading, embed: match[1] === '!',
 				label: separator < 0 ? undefined : match[2].slice(separator + 1),
-			} satisfies NoteLink;
+				inlineOffset: state.pos,
+			} satisfies WikilinkToken;
 		}
 		state.pos += match[0].length;
 		return true;

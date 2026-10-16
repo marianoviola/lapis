@@ -25,7 +25,7 @@ describe('note parsing', () => {
 	});
 	it('recognizes escaped alias separators without changing raw rendering', () => {
 		const record = note(String.raw`[[Other\|Label]] [[Other#Heading\|Label]] ![[Other\|Embed]]`);
-		expect(record.links).toEqual([
+		expect(record.links).toMatchObject([
 			{ target: 'Other', heading: undefined, label: 'Label', embed: false },
 			{ target: 'Other', heading: 'Heading', label: 'Label', embed: false },
 			{ target: 'Other', heading: undefined, label: 'Embed', embed: true },
@@ -46,6 +46,55 @@ describe('note parsing', () => {
 		const text = '\uFEFF---\r\nstatus: doing\r\n---\r\n# Heading\r\nBody\r\n';
 		expect(readFrontmatter(text).body).toBe('# Heading\r\nBody\r\n');
 		expect(note(text).headings[0].line).toBe(3);
+	});
+	it.each(['\n', '\r\n', '\r'])('round-trips source ranges through nested blocks with %j line endings', newline => {
+		const text = [
+			'\uFEFF# [[Title]] #',
+			'',
+			'> 1. **[[Other]]** `[[Other]]` [[Other]]',
+			'>    - ![[ Other # Heading \\|Alias ]]',
+			'>      [[#Local]] [[Other|label]]',
+			'',
+			'\t[[Indented code]]',
+			'',
+			'```',
+			'[[Fenced]]',
+			'```',
+			'',
+			'\\[[Escaped]] `[[Other]]` [[Other]]',
+		].join(newline);
+		const links = note(text).links;
+		expect(links.map(link => text.slice(link.range.start, link.range.end))).toEqual([
+			'[[Title]]', '[[Other]]', '[[Other]]', '![[ Other # Heading \\|Alias ]]',
+			'[[#Local]]', '[[Other|label]]', '[[Other]]',
+		]);
+		expect(links.map(link => text.slice(link.targetRange.start, link.targetRange.end)))
+			.toEqual(['Title', 'Other', 'Other', 'Other', '', 'Other', 'Other']);
+		const embed = links[3];
+		expect(text.slice(embed.headingRange!.start, embed.headingRange!.end)).toBe('Heading');
+		expect(text.slice(embed.labelRange!.start, embed.labelRange!.end)).toBe('Alias ');
+		expect(links.at(-1)!.range.start).toBe(text.lastIndexOf('[[Other]]'));
+		expect(Object.isFrozen(embed.range)).toBe(true);
+	});
+	it('maps links after frontmatter and identical code spans to absolute UTF-16 offsets', () => {
+		const text = '\uFEFF---\r\ntitle: "[[Metadata]]"\r\n---\r\n> - `[[Other]]` 😀 [[Other#Heading|Alias]] [[Other]]\r\n';
+		const links = note(text).links;
+		expect(links).toHaveLength(2);
+		expect(links[0].range.start).toBe(text.indexOf('[[Other#'));
+		expect(text.slice(links[0].range.start, links[0].range.end)).toBe('[[Other#Heading|Alias]]');
+		expect(links[1].range.start).toBe(text.lastIndexOf('[[Other]]'));
+	});
+	it('maps tabs, lazy continuations, setext and table aliases without changing source', () => {
+		const text = '> [[Quote]]\ncontinued [[Lazy]]\n\n- \t[[Tab]]\n\n[[Setext]]\n===\n\n| Link |\n| --- |\n| [[Other\\|Alias]] |\n';
+		const links = note(text).links;
+		expect(links.map(link => text.slice(link.range.start, link.range.end)))
+			.toEqual(['[[Quote]]', '[[Lazy]]', '[[Tab]]', '[[Setext]]', '[[Other\\|Alias]]']);
+	});
+	it('preserves source offsets when Markdown normalizes NUL characters', () => {
+		const text = '\0 [[Other\0|Alias]]';
+		const link = note(text).links[0];
+		expect(link.target).toBe('Other\uFFFD');
+		expect(text.slice(link.range.start, link.range.end)).toBe('[[Other\0|Alias]]');
 	});
 	it('reports malformed metadata without discarding valid Markdown', () => {
 		const record = note('---\nstatus: [\n---\n# Still available');
