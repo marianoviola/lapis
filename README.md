@@ -60,7 +60,8 @@ supported; remote behavior has not been certified.
 
 The index recognizes `[[Note]]`, `[[Note|Label]]`, `[[Note#Heading]]`, and
 `![[Note]]` in Markdown body text, excluding fenced/indented code, inline code,
-and escaped syntax. Heading line numbers are zero-based.
+and escaped syntax. Escaped alias separators (`[[Note\|Label]]`) are supported
+inside Markdown tables and ordinary body text. Heading line numbers are zero-based.
 
 Resolution checks explicit relative paths, then local/root-relative candidates,
 then a unique basename within the source workspace root. `/Note` is explicitly

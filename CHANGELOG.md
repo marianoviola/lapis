@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix escaped-pipe wikilink aliases, including heading links and embeds.
+
 ## 0.0.1 - 2026-10-02
 
 ### Added

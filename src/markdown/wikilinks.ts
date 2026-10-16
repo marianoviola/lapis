@@ -11,7 +11,9 @@ export function wikilinks(markdown: MarkdownIt): void {
 			return false;
 		}
 		const separator = match[2].indexOf('|');
-		const reference = (separator < 0 ? match[2] : match[2].slice(0, separator)).trim();
+		// Markdown tables escape alias separators; remove only that escape.
+		const referenceEnd = separator > 0 && match[2][separator - 1] === '\\' ? separator - 1 : separator;
+		const reference = (separator < 0 ? match[2] : match[2].slice(0, referenceEnd)).trim();
 		const fragment = reference.indexOf('#');
 		const target = (fragment < 0 ? reference : reference.slice(0, fragment)).trim();
 		const heading = fragment < 0 ? undefined : reference.slice(fragment + 1).trim();

@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import MarkdownIt from 'markdown-it';
+import { wikilinks } from '../src/markdown/wikilinks';
 import { parseNote } from '../src/index/parseNote';
 import { readFrontmatter } from '../src/metadata/frontmatter';
 
@@ -20,6 +22,25 @@ describe('note parsing', () => {
 		expect(record.links[2]).toMatchObject({ target: 'Other', heading: 'Heading' });
 		expect(record.links[3]).toMatchObject({ target: 'Other.md', embed: true });
 		expect(record.links[4]).toMatchObject({ target: '', heading: 'Local' });
+	});
+	it('recognizes escaped alias separators without changing raw rendering', () => {
+		const record = note(String.raw`[[Other\|Label]] [[Other#Heading\|Label]] ![[Other\|Embed]]`);
+		expect(record.links).toEqual([
+			{ target: 'Other', heading: undefined, label: 'Label', embed: false },
+			{ target: 'Other', heading: 'Heading', label: 'Label', embed: false },
+			{ target: 'Other', heading: undefined, label: 'Embed', embed: true },
+		]);
+	});
+	it('handles escaped aliases inside native Markdown tables', () => {
+		const markdown = new MarkdownIt().use(wikilinks);
+		const table = String.raw`| Link |
+| --- |
+| [[Other#Heading\|Alias]] |`;
+		const tokens = markdown.parse(table, {});
+		const link = tokens.flatMap(token => token.children ?? []).find(token => token.type === 'lapis_wikilink');
+		expect(link?.meta).toMatchObject({ target: 'Other', heading: 'Heading', label: 'Alias' });
+		expect(markdown.render(table)).toContain('[[Other#Heading|Alias]]');
+		expect(markdown.render(String.raw`[[Other\|Alias]]`)).toContain(String.raw`[[Other\|Alias]]`);
 	});
 	it('preserves the body and line offsets with a BOM and CRLF', () => {
 		const text = '\uFEFF---\r\nstatus: doing\r\n---\r\n# Heading\r\nBody\r\n';
