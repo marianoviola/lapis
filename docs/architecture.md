@@ -14,7 +14,7 @@ the vault, and no webview may parse or write Markdown.
 | `src/preview` | Resolver-backed wikilink rendering and native preview environment/refresh adapter. |
 | `src/index` | Pure note parser/index plus a VS Code event/filesystem adapter. |
 | `src/navigation` | Native Quick Pick over shared records. |
-| `src/language` | Native document links, definitions, ambiguity hovers and wikilink completion. |
+| `src/language` | Native document links, definitions, ambiguity hovers, completion and resolver-backed editor decorations. |
 | `src/extension.ts` | Composition, command registration, read-only API. |
 
 The pure index has no VS Code dependency. URI strings are identity; root-scoped
@@ -47,6 +47,15 @@ the user types so title/path search is applied to the current query. No separate
 file scan, note catalog, creation or save operation is introduced.
 The resolver strips one optional `.md` extension from references, while index
 keys are already canonical; repeated suffixes in filenames are preserved.
+
+Editor decorations reuse indexed occurrence ranges and resolver states rather
+than parsing Markdown again. Only visible, local Markdown editors whose buffer
+version matches the indexed record are decorated. Edits clear stale ranges
+immediately; index changes debounce a refresh of visible editors, including
+dependents when targets change. Theme colours and dotted/dashed underlines
+distinguish resolved, missing and ambiguous targets without adding diagnostics.
+Non-Markdown embeds with unresolved targets are left undecorated pending H7.
+Decoration types, listeners and the pending timer are disposed with the extension.
 
 The exported `extendMarkdownIt` hook hides closed frontmatter in the native
 preview by replacing its preamble with blank lines before block parsing. This

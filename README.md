@@ -41,6 +41,15 @@ Implemented:
 	**Ctrl+Space** also opens suggestions. Completion stays within the same vault,
 	preserves existing aliases/closing brackets, and ignores code and metadata.
 	Only the active buffer is edited when you accept; no note is created or saved.
+- Wikilinks in the source editor use theme-aware colours: resolved targets use
+	the link colour, missing notes use the warning colour with a dotted underline,
+	and ambiguous targets use the info colour with a dashed underline. The entire
+	wikilink, including its alias, is coloured; surrounding text is unchanged.
+	Colours update when notes change, appear or disappear, including unsaved edits.
+	Code, metadata and notes outside vaults are not decorated. Non-Markdown embeds
+	are not marked as missing while attachment resolution remains undefined.
+	A resolved note with a missing heading still uses the link colour, matching
+	navigation's fallback to the top of the note.
 - The native Markdown preview hides a closed YAML frontmatter preamble, even
 	when the YAML is invalid. Metadata stays editable in the source and available
 	in the index; diagnostics are unchanged. An unclosed preamble remains visible.
@@ -118,6 +127,8 @@ npx --yes pnpm@10 run package
 ```
 
 Unit tests cover parsing, link resolution, backlinks, and index races.
+Editor-decoration tests cover resolver states, source-version guards, visible
+editors, target lifecycle updates, code exclusions and disposal.
 Integration tests launch a separate Extension Host against a temporary vault;
 they cover marker discovery and lifecycle, multi-root namespace sharing and
 isolation, index exclusions, native wikilink navigation, preview metadata
