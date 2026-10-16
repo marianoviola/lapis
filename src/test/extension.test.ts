@@ -55,17 +55,18 @@ suite('Lapislazuli Extension Host', () => {
 	test('discovers typed metadata, excludes dependency folders and resolves backlinks', () => {
 		const welcome = vscode.Uri.joinPath(root, 'Welcome.md').toString();
 		const related = vscode.Uri.joinPath(root, 'Projects', 'Related.md').toString();
-		assert.equal(api.getNotes().length, 2);
+		const shared = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![1].uri, 'Shared.md').toString();
+		assert.equal(api.getNotes().length, 4);
 		assert.equal(api.getNote(welcome)?.title, 'Welcome to Lapislazuli');
 		assert.equal(api.getNote(welcome)?.properties.due, '2026-10-20');
 		assert.equal(api.resolveLink('Welcome', related).kind, 'resolved');
-		assert.deepEqual(api.getBacklinks(welcome).map(note => note.id), [related]);
+		assert.deepEqual(api.getBacklinks(welcome).map(note => note.id).sort(), [related, shared].sort());
 	});
 
 	test('registers native commands and can rebuild the index', async () => {
 		const commands = await vscode.commands.getCommands();
 		assert.ok(commands.includes('lapislazuli.openNote'));
-		assert.equal(await vscode.commands.executeCommand('lapislazuli.rebuildIndex'), 2);
+		assert.equal(await vscode.commands.executeCommand('lapislazuli.rebuildIndex'), 4);
 	});
 
 	test('opens a selected Quick Pick note in the native Markdown editor', async () => {
@@ -102,6 +103,51 @@ suite('Lapislazuli Extension Host', () => {
 		await observe(uri, note => note?.dirty === false && note.properties.status === 'doing', async () => { assert.ok(await document.save()); });
 		assert.ok(new TextDecoder().decode(await vscode.workspace.fs.readFile(uri)).includes('doing'));
 		await observe(uri, note => note === undefined, () => vscode.workspace.fs.delete(uri));
+	});
+
+	test('shares a vault namespace across workspace folders and isolates independent vaults', async () => {
+		const folders = vscode.workspace.workspaceFolders!;
+		const sharedNote = vscode.Uri.joinPath(folders[1].uri, 'Shared.md');
+		assert.equal(api.resolveLink('Welcome', sharedNote.toString()).kind, 'resolved');
+
+		const independentFolder = folders[2].uri;
+		const independentNote = vscode.Uri.joinPath(independentFolder, 'Private.md');
+		assert.equal(api.resolveLink('Welcome', independentNote.toString()).kind, 'missing');
+		assert.equal(api.getNote(independentNote.toString())?.rootUri, independentFolder.toString());
+	});
+
+	test('does not index a workspace until a .lapis marker is created, then removes its notes when deleted', async () => {
+		const folder = vscode.workspace.workspaceFolders![3].uri;
+		const note = vscode.Uri.joinPath(folder, 'Unmarked.md');
+		const marker = vscode.Uri.joinPath(folder, '.lapis');
+		assert.equal(api.getNote(note.toString()), undefined);
+
+		await observe(note, record => Boolean(record), () => vscode.workspace.fs.writeFile(marker, Buffer.from('')));
+		await observe(note, record => record === undefined, () => vscode.workspace.fs.delete(marker));
+	});
+
+	test('applies both extension and VS Code file exclusions', async () => {
+		const custom = vscode.Uri.joinPath(root, 'ExcludedBySetting', 'Note.md');
+		const byPattern = vscode.Uri.joinPath(root, 'ExcludedByPattern', 'Note.md');
+		created.add(custom.toString());
+		created.add(byPattern.toString());
+		await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(root, 'ExcludedBySetting'));
+		await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(root, 'ExcludedByPattern'));
+		await vscode.workspace.fs.writeFile(custom, Buffer.from('# Private\n'));
+		await vscode.workspace.fs.writeFile(byPattern, Buffer.from('# Hidden\n'));
+		const extensionConfig = vscode.workspace.getConfiguration('lapislazuli', root);
+		const filesConfig = vscode.workspace.getConfiguration('files', root);
+		try {
+			await extensionConfig.update('excludedFolders', ['ExcludedBySetting'], vscode.ConfigurationTarget.WorkspaceFolder);
+			await filesConfig.update('exclude', { '**/ExcludedByPattern/**': true }, vscode.ConfigurationTarget.WorkspaceFolder);
+			await api.whenIdle();
+			assert.equal(api.getNote(custom.toString()), undefined);
+			assert.equal(api.getNote(byPattern.toString()), undefined);
+		} finally {
+			await extensionConfig.update('excludedFolders', undefined, vscode.ConfigurationTarget.WorkspaceFolder);
+			await filesConfig.update('exclude', undefined, vscode.ConfigurationTarget.WorkspaceFolder);
+			await api.whenIdle();
+		}
 	});
 
 	test('publishes malformed YAML diagnostics and clears them after correction', async () => {

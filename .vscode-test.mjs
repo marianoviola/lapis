@@ -3,18 +3,42 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const vault = mkdtempSync(join(tmpdir(), 'lapislazuli-tests-'));
-mkdirSync(join(vault, 'Projects'));
-mkdirSync(join(vault, 'node_modules'));
-writeFileSync(join(vault, 'Welcome.md'), '---\ntitle: Welcome to Lapislazuli\nstatus: todo\ndue: 2026-10-20\n---\n# Welcome\n');
-writeFileSync(join(vault, 'Projects', 'Related.md'), '[[Welcome]]\n`[[Ignored]]`\n');
-writeFileSync(join(vault, 'node_modules', 'Ignored.md'), '# Not a vault note\n');
-process.on('exit', () => rmSync(vault, { recursive: true, force: true }));
+const vault = mkdtempSync(join(tmpdir(), 'lapis-tests-'));
+const independentVault = mkdtempSync(join(tmpdir(), 'lapislazuli-independent-'));
+const unmarkedFolder = mkdtempSync(join(tmpdir(), 'lapislazuli-unmarked-'));
+const workspace = join(vault, 'workspace');
+const secondWorkspace = join(vault, 'workspace-two');
+mkdirSync(workspace, { recursive: true });
+mkdirSync(join(workspace, 'Projects'));
+mkdirSync(join(workspace, 'node_modules'));
+mkdirSync(secondWorkspace);
+writeFileSync(join(vault, '.lapis'), '');
+writeFileSync(join(independentVault, '.lapis'), '');
+writeFileSync(join(workspace, 'Welcome.md'), '---\ntitle: Welcome to Lapislazuli\nstatus: todo\ndue: 2026-10-20\n---\n# Welcome\n');
+writeFileSync(join(workspace, 'Projects', 'Related.md'), '[[Welcome]]\n`[[Ignored]]`\n');
+writeFileSync(join(workspace, 'node_modules', 'Ignored.md'), '# Not a vault note\n');
+writeFileSync(join(secondWorkspace, 'Shared.md'), '[[Welcome]]\n');
+writeFileSync(join(independentVault, 'Private.md'), '[[Welcome]]\n');
+writeFileSync(join(unmarkedFolder, 'Unmarked.md'), '# No vault marker\n');
+const workspaceFile = join(vault, 'Lapislazuli.code-workspace');
+writeFileSync(workspaceFile, JSON.stringify({
+	folders: [
+		{ path: 'workspace' },
+		{ path: 'workspace-two' },
+		{ path: independentVault },
+		{ path: unmarkedFolder },
+	],
+}));
+process.on('exit', () => {
+	rmSync(vault, { recursive: true, force: true });
+	rmSync(independentVault, { recursive: true, force: true });
+	rmSync(unmarkedFolder, { recursive: true, force: true });
+});
 
 export default defineConfig({
 	files: 'out/test/**/*.test.js',
 	version: '1.140.0',
-	workspaceFolder: vault,
+	workspaceFolder: workspaceFile,
 	useInstallation: process.env.VSCODE_EXECUTABLE ? { fromPath: process.env.VSCODE_EXECUTABLE } : undefined,
 	launchArgs: ['--disable-extensions', '--skip-welcome', '--skip-release-notes', '--disable-workspace-trust'],
 	mocha: { timeout: 20000 },

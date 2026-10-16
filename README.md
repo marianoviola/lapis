@@ -4,20 +4,32 @@ A personal VS Code extension for lightweight knowledge workspaces built from
 ordinary Markdown files and YAML frontmatter. VS Code remains the editor,
 filesystem browser, search environment, and Markdown preview.
 
+## Vaults
+
+A vault is a directory containing a `.lapis` marker file. Lapislazuli indexes
+Markdown files only inside vaults; a marker may be in a workspace folder, a
+descendant, or an ancestor of a workspace folder. The extension checks ancestor
+directories as well as markers beneath each workspace folder.
+
+Workspace folders inside the same vault share one link-resolution namespace.
+The highest (outermost) discovered marker defines that vault root. Separate
+vaults have isolated namespaces, including when they are open in the same
+multi-root workspace. Creating or removing a marker updates the index.
+
 ## Milestone 1: Index And Note Navigation
 
 Implemented:
 
 - **Lapislazuli: Open Note** opens a native Quick Pick searchable by title, path, and
-	selected properties. It opens immediately and updates while indexing continues.
-	Selecting a note opens the native Markdown editor.
+	selected properties. Selecting a note opens the native Markdown editor.
 - A shared in-memory index tracks Markdown files, typed frontmatter, headings,
 	body wikilinks, file timestamps, and unsaved editor changes.
 - File creation, modification, deletion, and native renames update the index.
 	Pending reads cannot overwrite newer changes or resurrect deleted records.
 - Invalid frontmatter appears in the Problems panel. Notes remain navigable.
-- **Lapislazuli: Rebuild Index** provides explicit recovery after missed filesystem
-	events. The **Lapislazuli** Output channel reports discovery and read failures.
+- **Lapislazuli: Rebuild Index** provides explicit recovery after missed
+	filesystem events. The **Lapislazuli** Output channel reports discovery and
+	read failures.
 - The data layer supports root-scoped link resolution and cached backlinks.
 	Neither is exposed as preview rendering or a backlinks sidebar yet.
 
@@ -34,9 +46,10 @@ npx --yes pnpm@10 install
 npx --yes pnpm@10 run compile
 ```
 
-Press **F5** in this project to launch **Run Lapislazuli** in an Extension Development
-Host. Open your Markdown folder in that window, then run **Lapislazuli: Open Note**
-from the Command Palette. F5's build task uses pnpm through npx.
+Press **F5** in this project to launch **Run Lapislazuli** in an Extension
+Development Host. Open a folder containing or inside a `.lapis` vault in that
+window, then run **Lapislazuli: Open Note** from the Command Palette. F5's build
+task uses pnpm through npx.
 
 The index is read-only and can operate in Restricted Mode. Desktop/local
 workspaces are the currently verified target. Virtual workspaces are not
@@ -54,21 +67,23 @@ supported; remote behavior has not been certified.
 	without `.md` is used. File identity is its URI, not its display title.
 - Editor buffers take precedence over disk content. Event updates are debounced
 	by 100 ms. Nothing is automatically saved.
-- `lapislazuli.excludedFolders` lists directory names excluded at any depth. Defaults:
-	`.git`, `node_modules`, `dist`, `out`, and `.vscode-test`. These exclusions are
-	independent of VS Code's Explorer and search exclusions. Recursive watcher
-	events may also be suppressed by `files.watcherExclude`; rebuild to recover.
+- `lapislazuli.excludedFolders` lists directory names excluded at any depth.
+	Defaults: `.git`, `node_modules`, `dist`, `out`, and `.vscode-test`. Entries
+	in this setting and enabled `files.exclude` patterns are both respected.
+	Recursive watcher events may also be suppressed by `files.watcherExclude`;
+	rebuild to recover.
 
 The index recognizes `[[Note]]`, `[[Note|Label]]`, `[[Note#Heading]]`, and
 `![[Note]]` in Markdown body text, excluding fenced/indented code, inline code,
 and escaped syntax. Escaped alias separators (`[[Note\|Label]]`) are supported
-inside Markdown tables and ordinary body text. Heading line numbers are zero-based.
+inside Markdown tables and ordinary body text. Heading line numbers are
+zero-based.
 
 Resolution checks explicit relative paths, then local/root-relative candidates,
-then a unique basename within the source workspace root. `/Note` is explicitly
-root-relative. Names are case-sensitive, ambiguous matches are not guessed,
-and an empty target with a heading refers to the current note. Current rename
-handling updates index identity only; it does not rewrite inbound links.
+then a unique basename within the source vault. `/Note` is explicitly
+vault-root-relative. Names are case-sensitive, ambiguous matches are not
+guessed, and an empty target with a heading refers to the current note. Current
+rename handling updates index identity only; it does not rewrite inbound links.
 
 ## Checks
 
@@ -81,7 +96,9 @@ npx --yes pnpm@10 run package
 
 Unit tests cover parsing, link resolution, backlinks, and index races.
 Integration tests launch a separate Extension Host against a temporary vault;
-the runner removes that vault on exit and uses an isolated VS Code profile.
+they cover marker discovery and lifecycle, multi-root namespace sharing and
+isolation, and index exclusions. The runner removes its fixture on exit and
+uses an isolated VS Code profile.
 By default it downloads VS Code 1.140.0. To use an existing installation:
 
 ```sh
@@ -90,7 +107,8 @@ VSCODE_EXECUTABLE='/Applications/Visual Studio Code.app/Contents/MacOS/Code' \
 ```
 
 `package` builds the production bundle; it does not publish an extension or
-create a VSIX. No telemetry or network service is used by Lapislazuli at runtime.
+create a VSIX. No telemetry or network service is used by Lapislazuli at
+runtime.
 
 ## Next Slices
 
@@ -107,8 +125,8 @@ Create a local VSIX (the prepublish step builds and checks the extension):
 npx --yes @vscode/vsce package --no-dependencies --skip-license
 ```
 
-Dependencies are bundled in `dist/extension.js`. `--skip-license` permits local
-packaging while the project has no license file; it does not grant a license.
-In VS Code, use Extensions → … → Install from VSIX and select
+Dependencies are bundled in `dist/extension.js`. `--skip-license` permits
+local packaging while the project has no license file; it does not grant a
+license. In VS Code, use Extensions → … → Install from VSIX and select
 `lapislazuli-0.0.1.vsix`. Reload the window if prompted. Rebuild and reinstall
 the VSIX after source changes.

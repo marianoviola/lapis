@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { NoteSource } from '../domain/note';
 import { NoteIndex } from './noteIndex';
+import { VaultService } from '../vault/vaultService';
 
 const defaultExcludedFolders = ['.git', 'node_modules', 'dist', 'out', '.vscode-test'];
 const maxNoteBytes = 2 * 1024 * 1024;
@@ -16,11 +17,15 @@ export class WorkspaceIndex implements vscode.Disposable {
 	private scanGeneration = 0;
 	private disposed = false;
 
-	constructor(private readonly output: vscode.LogOutputChannel) {
+	constructor(private readonly output: vscode.LogOutputChannel, private readonly vaults: VaultService) {
 		this.notes = new NoteIndex(uri => this.read(uri), (uri, error) => {
 			this.output.error(`Cannot index ${uri}: ${error instanceof Error ? error.message : String(error)}`);
 		});
-		this.subscriptions.push(this.diagnostics, this.notes.onDidChange(uri => this.updateDiagnostics(uri)));
+		this.subscriptions.push(
+			this.diagnostics,
+			this.notes.onDidChange(uri => this.updateDiagnostics(uri)),
+			this.vaults.onDidChange(() => { void this.rebuild(); }),
+		);
 		this.syncWatchers();
 		this.subscriptions.push(
 			vscode.workspace.onDidCreateFiles(event => {
@@ -55,18 +60,17 @@ export class WorkspaceIndex implements vscode.Disposable {
 			vscode.workspace.onDidCloseTextDocument(document => this.schedule(document.uri)),
 			vscode.workspace.onDidChangeWorkspaceFolders(event => {
 				for (const folder of event.removed) {
-					this.notes.removeRoot(folder.uri.toString());
+					this.removeResource(folder.uri);
 				}
 				this.syncWatchers();
-				void this.rebuild();
 			}),
 			vscode.workspace.onDidChangeConfiguration(event => {
-				if (event.affectsConfiguration('lapislazuli.excludedFolders')) {
+				if (event.affectsConfiguration('lapislazuli.excludedFolders') || event.affectsConfiguration('files.exclude')) {
 					void this.rebuild();
 				}
 			}),
 		);
-		this.ready = this.rebuild();
+		this.ready = this.vaults.ready.then(() => this.rebuild());
 	}
 
 	async rebuild(): Promise<void> {
@@ -79,11 +83,11 @@ export class WorkspaceIndex implements vscode.Disposable {
 		const folders = vscode.workspace.workspaceFolders ?? [];
 		const known = this.notes.getNotes();
 		try {
-			const batches = await Promise.all(folders.map(folder => {
-				const excluded = this.excludedFolders(folder.uri);
-				const exclude = excluded.length ? `**/{${excluded.join(',')}}/**` : null;
-				return vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/*.[mM][dD]'), exclude);
-			}));
+			const batches = await Promise.all(folders.flatMap(folder => this.scanPatterns(folder).map(pattern => {
+					const excluded = this.excludedFolders(folder.uri);
+					const exclude = excluded.length ? `**/{${excluded.join(',')}}/**` : undefined;
+					return vscode.workspace.findFiles(new vscode.RelativePattern(folder, pattern), exclude);
+				})));
 			if (this.disposed || generation !== this.scanGeneration) {
 				return;
 			}
@@ -112,6 +116,7 @@ export class WorkspaceIndex implements vscode.Disposable {
 	async whenIdle(): Promise<void> {
 		let scan: Promise<void>;
 		do {
+			await this.vaults.whenIdle();
 			scan = this.scan;
 			await scan;
 			const uris = [...this.timers.keys()];
@@ -147,15 +152,41 @@ export class WorkspaceIndex implements vscode.Disposable {
 			&& /^[A-Za-z0-9._-]+$/.test(name) && name !== '.' && name !== '..') : defaultExcludedFolders;
 	}
 
-	private scope(uri: vscode.Uri): { folder: vscode.WorkspaceFolder; relativePath: string } | undefined {
+	private scanPatterns(folder: vscode.WorkspaceFolder): string[] {
+		const folderUri = folder.uri;
+		const roots = this.vaults.registry.getDirectories().map(value => vscode.Uri.parse(value));
+		if (roots.some(root => this.contains(root, folderUri))) {
+			return ['**/*.[mM][dD]'];
+		}
+		return roots
+			.filter(root => this.contains(folderUri, root))
+			.filter(root => !roots.some(parent => parent.toString() !== root.toString()
+				&& this.contains(folderUri, parent) && this.contains(parent, root)))
+			.map(root => `${root.path.slice(folderUri.path.replace(/\/$/, '').length + 1).replace(/\/$/, '')}/**/*.[mM][dD]`);
+	}
+
+	private contains(parent: vscode.Uri, child: vscode.Uri): boolean {
+		if (parent.scheme !== child.scheme || parent.authority !== child.authority) {
+			return false;
+		}
+		const parentPath = parent.path.replace(/\/+$/, '') || '/';
+		const childPath = child.path.replace(/\/+$/, '') || '/';
+		return childPath === parentPath || childPath.startsWith(parentPath === '/' ? '/' : `${parentPath}/`);
+	}
+
+	private scope(uri: vscode.Uri): { folder: vscode.WorkspaceFolder; rootUri: string; relativePath: string } | undefined {
 		const folder = vscode.workspace.getWorkspaceFolder(uri);
 		if (!folder || !/\.md$/i.test(uri.path)) {
 			return undefined;
 		}
 		const relativePath = uri.path.slice(folder.uri.path.replace(/\/$/, '').length + 1);
 		const directories = relativePath.split('/').slice(0, -1);
-		return directories.some(directory => this.excludedFolders(folder.uri).includes(directory))
-			? undefined : { folder, relativePath };
+		if (directories.some(directory => this.excludedFolders(folder.uri).includes(directory))
+			|| this.excludedByFilesSetting(folder.uri, relativePath)) {
+			return undefined;
+		}
+		const membership = this.vaults.registry.resolve(uri.toString());
+		return membership ? { folder, rootUri: membership.rootUri, relativePath: membership.relativePath } : undefined;
 	}
 
 	private async read(id: string): Promise<NoteSource | undefined> {
@@ -185,9 +216,69 @@ export class WorkspaceIndex implements vscode.Disposable {
 			return undefined;
 		}
 		return {
-			uri: id, rootUri: currentScope.folder.uri.toString(), relativePath: currentScope.relativePath, text,
+			uri: id, rootUri: currentScope.rootUri, relativePath: currentScope.relativePath, text,
 			dirty: document?.isDirty ?? false, documentVersion: document?.version, ctime: stat.ctime, mtime: stat.mtime,
 		};
+	}
+
+	private excludedByFilesSetting(folder: vscode.Uri, relativePath: string): boolean {
+		const value = vscode.workspace.getConfiguration('files', folder).get<unknown>('exclude', {});
+		if (!value || typeof value !== 'object' || Array.isArray(value)) {
+			return false;
+		}
+		const paths = relativePath.split('/');
+		for (const [pattern, enabled] of Object.entries(value)) {
+			if (enabled !== true) {
+				continue;
+			}
+			const expression = this.globExpression(pattern);
+			if (paths.some((_, index) => expression.test(paths.slice(0, index + 1).join('/')))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private globExpression(pattern: string): RegExp {
+		const normalized = pattern.replace(/\\/g, '/').replace(/^\.\//, '');
+		let expression = '^';
+		let braces = 0;
+		for (let index = 0; index < normalized.length; index++) {
+			const character = normalized[index];
+			if (character === '*' && normalized[index + 1] === '*') {
+				if (normalized[index + 2] === '/') {
+					expression += '(?:.*/)?';
+					index += 2;
+				} else {
+					expression += '.*';
+					index++;
+				}
+			} else if (character === '*') {
+				expression += '[^/]*';
+			} else if (character === '?') {
+				expression += '[^/]';
+			} else if (character === '{') {
+				expression += '(?:';
+				braces++;
+			} else if (character === '}' && braces) {
+				expression += ')';
+				braces--;
+			} else if (character === ',' && braces) {
+				expression += '|';
+			} else if (character === '[') {
+				const end = normalized.indexOf(']', index + 1);
+				if (end > index + 1) {
+					const characters = normalized.slice(index + 1, end).replace(/^!/, '^');
+					expression += `[${characters}]`;
+					index = end;
+				} else {
+					expression += '\\[';
+				}
+			} else {
+				expression += /[\\^$+?.()|]/.test(character) ? `\\${character}` : character;
+			}
+		}
+		return new RegExp(`${expression}$`);
 	}
 
 	private schedule(uri: vscode.Uri): void {
