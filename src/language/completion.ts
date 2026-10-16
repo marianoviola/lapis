@@ -7,6 +7,9 @@ export function registerWikilinkCompletion(workspace: WorkspaceIndex): vscode.Di
 		{ language: 'markdown', scheme: 'file' },
 		{
 			async provideCompletionItems(document, position, token) {
+				if (!vscode.workspace.getConfiguration('lapis', document.uri).get<boolean>('wikilinkCompletion', false)) {
+					return [];
+				}
 				await workspace.ready;
 				workspace.synchronizeOpenDocuments();
 				if (token.isCancellationRequested || !workspace.notes.get(document.uri.toString())) {

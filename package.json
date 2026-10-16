@@ -35,11 +35,110 @@
         "command": "lapis.rebuildIndex",
         "title": "Rebuild Index",
         "category": "Lapis"
+      },
+      {
+        "command": "lapis.insertWikilink",
+        "title": "Insert Wikilink",
+        "category": "Lapis",
+        "enablement": "editorLangId == markdown"
+      },
+      {
+        "command": "lapis.table.format",
+        "title": "Format Table",
+        "category": "Lapis",
+        "enablement": "editorLangId == markdown"
+      },
+      {
+        "command": "lapis.table.alignLeft",
+        "title": "Align Column Left",
+        "category": "Lapis",
+        "enablement": "editorLangId == markdown"
+      },
+      {
+        "command": "lapis.table.alignCenter",
+        "title": "Align Column Center",
+        "category": "Lapis",
+        "enablement": "editorLangId == markdown"
+      },
+      {
+        "command": "lapis.table.alignRight",
+        "title": "Align Column Right",
+        "category": "Lapis",
+        "enablement": "editorLangId == markdown"
+      },
+      {
+        "command": "lapis.table.insertRowAbove",
+        "title": "Insert Table Row Above",
+        "category": "Lapis",
+        "enablement": "editorLangId == markdown"
+      },
+      {
+        "command": "lapis.table.insertRowBelow",
+        "title": "Insert Table Row Below",
+        "category": "Lapis",
+        "enablement": "editorLangId == markdown"
+      },
+      {
+        "command": "lapis.table.deleteRow",
+        "title": "Delete Table Row",
+        "category": "Lapis",
+        "enablement": "editorLangId == markdown"
+      },
+      {
+        "command": "lapis.table.insertColumnLeft",
+        "title": "Insert Table Column Left",
+        "category": "Lapis",
+        "enablement": "editorLangId == markdown"
+      },
+      {
+        "command": "lapis.table.insertColumnRight",
+        "title": "Insert Table Column Right",
+        "category": "Lapis",
+        "enablement": "editorLangId == markdown"
+      },
+      {
+        "command": "lapis.table.deleteColumn",
+        "title": "Delete Table Column",
+        "category": "Lapis",
+        "enablement": "editorLangId == markdown"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "lapis.insertWikilink",
+          "when": "editorLangId == markdown",
+          "group": "modification"
+        },
+        {
+          "submenu": "lapis.table",
+          "when": "editorLangId == markdown && lapis.inTable",
+          "group": "modification"
+        }
+      ],
+      "lapis.table": [
+        { "command": "lapis.table.format", "group": "1_format" },
+        { "command": "lapis.table.alignLeft", "group": "1_format" },
+        { "command": "lapis.table.alignCenter", "group": "1_format" },
+        { "command": "lapis.table.alignRight", "group": "1_format" },
+        { "command": "lapis.table.insertRowAbove", "group": "2_rows" },
+        { "command": "lapis.table.insertRowBelow", "group": "2_rows" },
+        { "command": "lapis.table.deleteRow", "group": "2_rows" },
+        { "command": "lapis.table.insertColumnLeft", "group": "3_columns" },
+        { "command": "lapis.table.insertColumnRight", "group": "3_columns" },
+        { "command": "lapis.table.deleteColumn", "group": "3_columns" }
+      ]
+    },
+    "submenus": [{ "id": "lapis.table", "label": "Lapis: Table" }],
     "configuration": {
       "title": "Lapis",
       "properties": {
+        "lapis.wikilinkCompletion": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "description": "Enable optional wikilink suggestions in the editor completion widget. Disabled by default to avoid competing with VS Code and Copilot suggestions; use Lapis: Insert Wikilink instead."
+        },
         "lapis.excludedFolders": {
           "type": "array",
           "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
@@ -89,6 +188,7 @@
     "markdown-it": "^14.3.2",
     "markdown-it-footnote": "^4.0.0",
     "markdown-it-mark": "^4.0.0",
+    "string-width": "^4.2.3",
     "yaml": "^2.9.1"
   }
 }

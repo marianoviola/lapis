@@ -1,7 +1,7 @@
 import { performance } from 'node:perf_hooks';
 import { describe, expect, it } from 'vitest';
 import { NoteIndex } from '../src/index/noteIndex';
-import { completionContext, linkSuggestions } from '../src/language/completionItems';
+import { completionContext, linkSuggestions, wikilinkInsertion } from '../src/language/completionItems';
 
 function fixture() {
 	const notes = new NoteIndex(async () => undefined);
@@ -23,6 +23,28 @@ function complete(text: string, cursor = text.length) {
 }
 
 describe('wikilink completion', () => {
+	it('builds command insertions at a cursor or selection and reuses alias/heading ranges', () => {
+		const { notes, source } = fixture();
+		for (const [text, start, end] of [['Before  after', 7, 7], ['Before label after', 7, 12]] as const) {
+			const insertion = wikilinkInsertion(text, start, end)!;
+			const item = linkSuggestions(notes, source, insertion.context).find(item => item.description === 'Goals.md')!;
+			expect(text.slice(0, insertion.start) + insertion.prefix + item.insertText + text.slice(insertion.end))
+				.toBe('Before [[Goals]] after');
+		}
+		const text = '[[old\\|Alias]]';
+		const insertion = wikilinkInsertion(text, 3, 3)!;
+		const item = linkSuggestions(notes, source, { ...insertion.context, target: '' }).find(item => item.description === 'Goals.md')!;
+		expect(text.slice(0, insertion.start) + insertion.prefix + item.insertText + text.slice(insertion.end)).toBe('[[Goals\\|Alias]]');
+		expect(wikilinkInsertion('[[Goals#]]', 8, 8)?.context.heading).toBe(true);
+	});
+
+	it('refuses command insertions in metadata and code', () => {
+		for (const text of ['---\ntitle: HERE\n---\n', '`HERE`', '```\nHERE\n```']) {
+			const offset = text.indexOf('HERE');
+			expect(wikilinkInsertion(text, offset, offset)).toBeUndefined();
+		}
+	});
+
 	it('inserts the shortest uniquely resolving targets in the same vault', () => {
 		const { notes, source, add } = fixture();
 		add('one/Source.md');

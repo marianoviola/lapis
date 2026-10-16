@@ -53,6 +53,23 @@ suite('Lapis Extension Host', () => {
 		});
 	}
 
+	function observeText(document: vscode.TextDocument, text: string, action: () => PromiseLike<unknown>): Promise<void> {
+		return new Promise((resolve, reject) => {
+			const cleanup = () => { clearTimeout(timeout); listener.dispose(); };
+			const check = () => {
+				if (document.getText() === text) { cleanup(); resolve(); }
+			};
+			const listener = vscode.workspace.onDidChangeTextDocument(event => {
+				if (event.document === document) { check(); }
+			});
+			const timeout = setTimeout(() => {
+				cleanup();
+				reject(new Error('Timed out waiting for the expected document text'));
+			}, 10000);
+			Promise.resolve().then(action).then(check, error => { cleanup(); reject(error); });
+		});
+	}
+
 	test('discovers typed metadata, excludes dependency folders and resolves backlinks', () => {
 		const welcome = vscode.Uri.joinPath(root, 'Welcome.md').toString();
 		const related = vscode.Uri.joinPath(root, 'Projects', 'Related.md').toString();
@@ -94,6 +111,80 @@ suite('Lapis Extension Host', () => {
 		await vscode.commands.executeCommand('lapis.openNote');
 		await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem');
 		await opened;
+	});
+
+	test('formats only the active table outside vaults and undoes it in one step', async () => {
+		const source = 'Before\n\n| Name | Qty |\n| --- | --- |\n| apple | 2 |\n\nAfter\n';
+		const document = await vscode.workspace.openTextDocument({ language: 'markdown', content: source });
+		const editor = await vscode.window.showTextDocument(document);
+		try {
+			editor.selection = new vscode.Selection(4, 4, 4, 4);
+			await vscode.commands.executeCommand('lapis.table.format');
+			const formatted = document.getText();
+			assert.notEqual(formatted, source);
+			assert.ok(formatted.startsWith('Before\n\n'));
+			assert.ok(formatted.endsWith('\n\nAfter\n'));
+			assert.equal(editor.selection.active.line, 4);
+			assert.equal(document.lineAt(4).text.slice(editor.selection.active.character, editor.selection.active.character + 5), 'apple');
+			await vscode.commands.executeCommand('lapis.table.format');
+			assert.equal(document.getText(), formatted);
+			await observeText(document, source, () => vscode.commands.executeCommand('undo'));
+			assert.equal(document.getText(), source);
+			await observeText(document, formatted, () => vscode.commands.executeCommand('redo'));
+			assert.equal(document.getText(), formatted);
+		} finally {
+			await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+		}
+	});
+
+	test('offers table Code Actions and preserves logical cells through structural edits', async () => {
+		const document = await vscode.workspace.openTextDocument({
+			language: 'markdown', content: '| Name | Qty |\n| --- | --- |\n| apple | 2 |\n',
+		});
+		const editor = await vscode.window.showTextDocument(document);
+		try {
+			editor.selection = new vscode.Selection(2, 4, 2, 4);
+			const actions = await vscode.commands.executeCommand<(vscode.CodeAction | vscode.Command)[]>(
+				'vscode.executeCodeActionProvider', document.uri, editor.selection);
+			const insert = actions?.find((action): action is vscode.CodeAction =>
+				action instanceof vscode.CodeAction && action.command?.command === 'lapis.table.insertColumnRight');
+			assert.ok(insert?.command);
+			await vscode.commands.executeCommand(insert.command.command, ...insert.command.arguments!);
+			assert.equal(editor.selection.active.line, 2);
+			const character = editor.selection.active.character;
+			assert.equal(document.lineAt(2).text.slice(character, character + 1), '|');
+			await vscode.commands.executeCommand('lapis.table.deleteColumn');
+			assert.match(document.lineAt(2).text, /apple\s*\|\s*2/);
+			await vscode.commands.executeCommand('lapis.table.insertRowBelow');
+			assert.equal(editor.selection.active.line, 3);
+			assert.equal(document.lineCount, 5);
+			await vscode.commands.executeCommand('lapis.table.deleteRow');
+			assert.equal(editor.selection.active.line, 2);
+			assert.equal(document.lineCount, 4);
+			const beforeAlignment = document.getText();
+			await vscode.commands.executeCommand('lapis.table.alignCenter');
+			assert.match(document.lineAt(1).text, /:---:/);
+			await observeText(document, beforeAlignment, () => vscode.commands.executeCommand('undo'));
+			assert.doesNotMatch(document.lineAt(1).text, /:---:/);
+		} finally {
+			await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+		}
+	});
+
+	test('does not offer table actions inside code fences or frontmatter', async () => {
+		const document = await vscode.workspace.openTextDocument({
+			language: 'markdown', content: '---\ntitle: sample\n---\n\n```\n| A | B |\n| --- | --- |\n| x | y |\n```\n',
+		});
+		await vscode.window.showTextDocument(document);
+		try {
+			for (const line of [1, 5, 7]) {
+				const actions = await vscode.commands.executeCommand<(vscode.CodeAction | vscode.Command)[]>(
+					'vscode.executeCodeActionProvider', document.uri, new vscode.Range(line, 0, line, 0));
+				assert.ok(!actions?.some(action => action.title.startsWith('Lapis:')));
+			}
+		} finally {
+			await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+		}
 	});
 
 	test('tracks external creation, unsaved editor changes, save and deletion', async () => {
@@ -409,8 +500,13 @@ suite('Lapis Extension Host', () => {
 				'vscode.executeCompletionItemProvider', sourceUri, new vscode.Position(line, character), trigger);
 			return result!.items.filter(item => item.detail === 'workspace-two/Completion target.md');
 		};
+		const configuration = vscode.workspace.getConfiguration('lapis', sourceUri);
+		const previous = configuration.inspect<boolean>('wikilinkCompletion')?.workspaceFolderValue;
 		try {
 			await vscode.window.showTextDocument(source);
+			assert.equal(configuration.get('wikilinkCompletion'), false);
+			assert.equal((await completions(0, 6, '[')).length, 0);
+			await configuration.update('wikilinkCompletion', true, vscode.ConfigurationTarget.WorkspaceFolder);
 			const notes = await completions(0, 6, '[');
 			assert.equal(notes.length, 1);
 			assert.equal(typeof notes[0].label === 'string' ? notes[0].label : notes[0].label.label, 'Completion title');
@@ -437,6 +533,7 @@ suite('Lapis Extension Host', () => {
 			assert.equal(new TextDecoder().decode(await vscode.workspace.fs.readFile(sourceUri)), sourceText);
 			assert.ok(new TextDecoder().decode(await vscode.workspace.fs.readFile(targetUri)).includes('# Original'));
 		} finally {
+			await configuration.update('wikilinkCompletion', previous, vscode.ConfigurationTarget.WorkspaceFolder);
 			for (const document of [source, target]) {
 				await vscode.window.showTextDocument(document);
 				await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');

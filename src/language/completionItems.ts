@@ -22,6 +22,23 @@ export interface LinkSuggestion {
 	readonly filterText: string;
 }
 
+export interface WikilinkInsertion {
+	start: number;
+	end: number;
+	prefix: string;
+	context: CompletionContext;
+}
+
+export function wikilinkInsertion(text: string, start: number, end: number): WikilinkInsertion | undefined {
+	if (start === end) {
+		const context = completionContext(text, start);
+		if (context) { return { start: context.start, end: context.end, prefix: '', context }; }
+	}
+	const candidate = text.slice(0, start) + '[[lapis-insert]]' + text.slice(end);
+	const context = completionContext(candidate, start + 2);
+	return context ? { start, end, prefix: '[[', context: { ...context, target: '', suffix: ']]' } } : undefined;
+}
+
 export function completionContext(text: string, offset: number): CompletionContext | undefined {
 	const lineStart = text.lastIndexOf('\n', offset - 1) + 1;
 	const opening = text.lastIndexOf('[[', offset - 1);
