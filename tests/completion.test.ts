@@ -114,7 +114,7 @@ describe('wikilink completion', () => {
 		}
 		expect(complete('> - ![[Go').start).toBe(7);
 		expect(complete('[[Go]]\r\n[[Go', 12).start).toBe(10);
-		expect(complete('lapislazuli-completion-context\n[[Go').start).toBe(33);
+		expect(complete('lapis-completion-context\n[[Go').start).toBe(27);
 	});
 
 	it('responds to target changes without a separate cached note catalog', () => {

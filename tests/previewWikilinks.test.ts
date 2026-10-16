@@ -35,12 +35,12 @@ describe('preview wikilinks', () => {
 
 	it('distinguishes missing and ambiguous links without making them navigable', () => {
 		const { render } = fixture();
-		expect(render('[[Missing]]')).toContain('class="lapislazuli-wikilink-missing"');
+		expect(render('[[Missing]]')).toContain('class="lapis-wikilink-missing"');
 		const ambiguous = render('[[Duplicate]]');
-		expect(ambiguous).toContain('class="lapislazuli-wikilink-ambiguous"');
+		expect(ambiguous).toContain('class="lapis-wikilink-ambiguous"');
 		expect(ambiguous).toContain('one/Duplicate.md, two/Duplicate.md');
 		expect(ambiguous).not.toContain('<a ');
-		expect(render('[[Private]]')).toContain('lapislazuli-wikilink-missing');
+		expect(render('[[Private]]')).toContain('lapis-wikilink-missing');
 	});
 
 	it('escapes labels and candidate tooltips without interpreting Markdown or HTML', () => {
@@ -64,7 +64,7 @@ describe('preview wikilinks', () => {
 	it('keeps code, escaped links, existing Markdown links and embeds inert', () => {
 		const { render } = fixture();
 		const html = render('`[[Target]]` \\[[Target]] ![[Target]] [normal](https://example.com)\n\n```\n[[Target]]\n```');
-		expect(html).not.toContain('class="lapislazuli-wikilink"');
+		expect(html).not.toContain('class="lapis-wikilink"');
 		expect(html).toContain('<code>[[Target]]</code>');
 		expect(html).toContain('![[Target]]');
 		expect(html).toContain('href="https://example.com"');

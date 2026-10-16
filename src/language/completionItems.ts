@@ -38,7 +38,7 @@ export function completionContext(text: string, offset: number): CompletionConte
 	const content = closing < 0 ? rest : rest.slice(0, closing);
 	// In an unfinished link, replace only the typed reference, not following prose.
 	const end = closing < 0 ? offset : opening + 2 + closing + 2;
-	let marker = 'lapislazuli-completion-context';
+	let marker = 'lapis-completion-context';
 	while (text.includes(marker)) {
 		marker += '-';
 	}

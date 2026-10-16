@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Lapislazuli: Compile",
+			"label": "Lapis: Compile",
 			"type": "shell",
 			"command": "npx",
 			"args": ["--yes", "pnpm@10", "run", "compile"],

@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const vault = mkdtempSync(join(tmpdir(), 'lapis-tests-'));
-const independentVault = mkdtempSync(join(tmpdir(), 'lapislazuli-independent-'));
-const unmarkedFolder = mkdtempSync(join(tmpdir(), 'lapislazuli-unmarked-'));
+const independentVault = mkdtempSync(join(tmpdir(), 'lapis-independent-'));
+const unmarkedFolder = mkdtempSync(join(tmpdir(), 'lapis-unmarked-'));
 const workspace = join(vault, 'workspace');
 const secondWorkspace = join(vault, 'workspace-two');
 mkdirSync(workspace, { recursive: true });
@@ -14,13 +14,13 @@ mkdirSync(join(workspace, 'node_modules'));
 mkdirSync(secondWorkspace);
 writeFileSync(join(vault, '.lapis'), '');
 writeFileSync(join(independentVault, '.lapis'), '');
-writeFileSync(join(workspace, 'Welcome.md'), '---\ntitle: Welcome to Lapislazuli\nstatus: todo\ndue: 2026-10-20\n---\n# Welcome\n');
+writeFileSync(join(workspace, 'Welcome.md'), '---\ntitle: Welcome to Lapis\nstatus: todo\ndue: 2026-10-20\n---\n# Welcome\n');
 writeFileSync(join(workspace, 'Projects', 'Related.md'), '[[Welcome]]\n`[[Ignored]]`\n');
 writeFileSync(join(workspace, 'node_modules', 'Ignored.md'), '# Not a vault note\n');
 writeFileSync(join(secondWorkspace, 'Shared.md'), '[[Welcome]]\n');
 writeFileSync(join(independentVault, 'Private.md'), '[[Welcome]]\n');
 writeFileSync(join(unmarkedFolder, 'Unmarked.md'), '# No vault marker\n');
-const workspaceFile = join(vault, 'Lapislazuli.code-workspace');
+const workspaceFile = join(vault, 'Lapis.code-workspace');
 writeFileSync(workspaceFile, JSON.stringify({
 	folders: [
 		{ path: 'workspace' },

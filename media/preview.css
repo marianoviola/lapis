@@ -2,20 +2,20 @@
 	font-size: 0.9em;
 }
 
-.lapislazuli-wikilink-missing {
+.lapis-wikilink-missing {
 	color: var(--vscode-editorWarning-foreground);
 	text-decoration: underline dotted;
 }
 
-.lapislazuli-wikilink-ambiguous {
+.lapis-wikilink-ambiguous {
 	color: var(--vscode-editorInfo-foreground);
 	text-decoration: underline dashed;
 }
 
-.lapislazuli-wikilink {
+.lapis-wikilink {
 	color: var(--vscode-textLink-foreground);
 }
 
-.lapislazuli-wikilink:hover {
+.lapis-wikilink:hover {
 	color: var(--vscode-textLink-activeForeground);
 }

@@ -1,7 +1,7 @@
 {
-  "name": "lapislazuli",
-  "displayName": "Lapislazuli",
-  "icon": "media/lapislazuli-icon.png",
+  "name": "lapis",
+  "displayName": "Lapis",
+  "icon": "media/lapis-icon.png",
   "description": "Lightweight knowledge navigation and structured views for plain Markdown workspaces.",
   "version": "0.0.1",
   "repository": {
@@ -27,20 +27,20 @@
     "markdown.previewStyles": ["media/preview.css"],
     "commands": [
       {
-        "command": "lapislazuli.openNote",
+        "command": "lapis.openNote",
         "title": "Open Note",
-        "category": "Lapislazuli"
+        "category": "Lapis"
       },
       {
-        "command": "lapislazuli.rebuildIndex",
+        "command": "lapis.rebuildIndex",
         "title": "Rebuild Index",
-        "category": "Lapislazuli"
+        "category": "Lapis"
       }
     ],
     "configuration": {
-      "title": "Lapislazuli",
+      "title": "Lapis",
       "properties": {
-        "lapislazuli.excludedFolders": {
+        "lapis.excludedFolders": {
           "type": "array",
           "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
           "default": [".git", "node_modules", "dist", "out", ".vscode-test"],

@@ -10,7 +10,7 @@ import { registerWikilinkCompletion } from './language/completion';
 import { registerWikilinkDecorations } from './language/decorations';
 import { nativePreview } from './preview/nativePreview';
 
-export interface LapislazuliApi {
+export interface LapisApi {
 	extendMarkdownIt(markdown: MarkdownIt): MarkdownIt;
 	onDidChange(listener: (uri: string) => void): vscode.Disposable;
 	getNotes(): readonly NoteRecord[];
@@ -20,8 +20,8 @@ export interface LapislazuliApi {
 	whenIdle(): Promise<void>;
 }
 
-export function activate(context: vscode.ExtensionContext): LapislazuliApi {
-	const output = vscode.window.createOutputChannel('Lapislazuli', { log: true });
+export function activate(context: vscode.ExtensionContext): LapisApi {
+	const output = vscode.window.createOutputChannel('Lapis', { log: true });
 	const vaults = new VaultService(output);
 	const workspace = new WorkspaceIndex(output, vaults);
 	const preview = nativePreview(workspace, output);
@@ -30,9 +30,9 @@ export function activate(context: vscode.ExtensionContext): LapislazuliApi {
 		registerWikilinkNavigation(workspace),
 		registerWikilinkCompletion(workspace),
 		registerWikilinkDecorations(workspace),
-		vscode.commands.registerCommand('lapislazuli.openNote', () => openNote(workspace)),
-		vscode.commands.registerCommand('lapislazuli.rebuildIndex', async () => {
-			await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'Lapislazuli: Rebuilding note index' }, () => workspace.rebuild());
+		vscode.commands.registerCommand('lapis.openNote', () => openNote(workspace)),
+		vscode.commands.registerCommand('lapis.rebuildIndex', async () => {
+			await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'Lapis: Rebuilding note index' }, () => workspace.rebuild());
 			return workspace.notes.size;
 		}),
 	);

@@ -27,10 +27,10 @@ export function previewWikilinks(markdown: MarkdownIt, notes: NoteIndex,
 		if (resolution.kind !== 'resolved') {
 			const title = resolution.kind === 'missing' ? 'Unresolved wikilink'
 				: `Ambiguous wikilink: ${resolution.candidates.map(note => note.relativePath).join(', ')}`;
-			return `<span class="lapislazuli-wikilink-${resolution.kind}" title="${escape(title)}">${label}</span>`;
+			return `<span class="lapis-wikilink-${resolution.kind}" title="${escape(title)}">${label}</span>`;
 		}
 		const destination = escape(href(from, resolution.note, headingFragment(resolution.note, link.heading)));
-		return `<a class="lapislazuli-wikilink" href="${destination}" data-href="${destination}">${label}</a>`;
+		return `<a class="lapis-wikilink" href="${destination}" data-href="${destination}">${label}</a>`;
 	};
 	return markdown;
 }

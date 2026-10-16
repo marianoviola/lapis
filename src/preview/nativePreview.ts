@@ -50,9 +50,9 @@ export function nativePreview(workspace: WorkspaceIndex, output: vscode.LogOutpu
 		extendMarkdownIt(markdown) {
 			used = true;
 			previewFrontmatter(markdown);
-			markdown.core.ruler.before('block', 'lapislazuli_preview_buffers', () => workspace.synchronizeOpenDocuments());
+			markdown.core.ruler.before('block', 'lapis_preview_buffers', () => workspace.synchronizeOpenDocuments());
 			const contexts = new WeakMap<object, object>();
-			markdown.core.ruler.before('inline', 'lapislazuli_preview_context', state => {
+			markdown.core.ruler.before('inline', 'lapis_preview_context', state => {
 				const env: unknown = state.env;
 				if (typeof env === 'object' && env !== null) {
 					for (const token of state.tokens) {
