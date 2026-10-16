@@ -9,3 +9,9 @@ declare module 'markdown-it-footnote' {
 	const footnote: PluginSimple;
 	export = footnote;
 }
+
+declare module 'markdown-it/lib/rules_inline/text.mjs' {
+	import MarkdownIt from 'markdown-it';
+	const text: Parameters<MarkdownIt['inline']['ruler']['at']>[1];
+	export default text;
+}

@@ -8,6 +8,7 @@ import { VaultService } from './vault/vaultService';
 import { registerWikilinkNavigation } from './language/links';
 import { registerWikilinkCompletion } from './language/completion';
 import { registerWikilinkDecorations } from './language/decorations';
+import { registerBlockquoteDecorations } from './language/blockquoteDecorations';
 import { nativePreview } from './preview/nativePreview';
 
 export interface LapisApi {
@@ -30,6 +31,7 @@ export function activate(context: vscode.ExtensionContext): LapisApi {
 		registerWikilinkNavigation(workspace),
 		registerWikilinkCompletion(workspace),
 		registerWikilinkDecorations(workspace),
+		registerBlockquoteDecorations(output),
 		vscode.commands.registerCommand('lapis.openNote', () => openNote(workspace)),
 		vscode.commands.registerCommand('lapis.rebuildIndex', async () => {
 			await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'Lapis: Rebuilding note index' }, () => workspace.rebuild());
