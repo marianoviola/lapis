@@ -16,6 +16,7 @@ export async function openNote(workspace: WorkspaceIndex): Promise<void> {
 	picker.matchOnDescription = true;
 	picker.matchOnDetail = true;
 	picker.busy = true;
+	let hidden = false;
 	const update = () => {
 		const active = picker.activeItems[0]?.uri.toString();
 		picker.items = workspace.notes.getNotes().map(note => {
@@ -34,7 +35,6 @@ export async function openNote(workspace: WorkspaceIndex): Promise<void> {
 		const previous = picker.items.find(item => item.uri.toString() === active);
 		picker.activeItems = previous ? [previous] : picker.items.slice(0, 1);
 	};
-	let disposed = false;
 	const subscriptions: vscode.Disposable[] = [];
 	subscriptions.push(
 		workspace.notes.onDidChange(update),
@@ -49,27 +49,29 @@ export async function openNote(workspace: WorkspaceIndex): Promise<void> {
 		}),
 	);
 	subscriptions.push(picker.onDidHide(() => {
-		disposed = true;
+		hidden = true;
 		for (const subscription of subscriptions) {
 			subscription.dispose();
 		}
 		picker.dispose();
 	}));
 	update();
+	if (!picker.items.length) {
+		picker.placeholder = 'No Markdown notes found in the included workspace folders';
+	}
 	picker.show();
 	void workspace.whenIdle().then(() => {
-		if (disposed) {
-			return;
-		}
-		update();
-		picker.busy = false;
-		if (!picker.items.length) {
-			picker.placeholder = 'No Markdown notes found in the included workspace folders';
+		if (!hidden) {
+			update();
+			picker.busy = false;
+			if (!picker.items.length) {
+				picker.placeholder = 'No Markdown notes found in the included workspace folders';
+			}
 		}
 	}, error => {
-		if (!disposed) {
+		if (!hidden) {
 			picker.busy = false;
-			void vscode.window.showErrorMessage(`Lapislazuli could not finish indexing: ${error instanceof Error ? error.message : String(error)}`);
+			void vscode.window.showErrorMessage(`Lapislazuli could not finish indexing notes: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	});
 }
