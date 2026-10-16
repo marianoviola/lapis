@@ -53,6 +53,8 @@ Implemented:
 - The native Markdown preview hides a closed YAML frontmatter preamble, even
 	when the YAML is invalid. Metadata stays editable in the source and available
 	in the index; diagnostics are unchanged. An unclosed preamble remains visible.
+- Inline code in the native preview uses 90% of the surrounding font size.
+	Code blocks and source-editor font settings are unchanged.
 - Preview wikilinks resolve through the same vault index, including heading
 	anchors and unsaved target headings. Missing links have a dotted underline;
 	ambiguous links have a dashed underline and list candidates in their tooltip.
