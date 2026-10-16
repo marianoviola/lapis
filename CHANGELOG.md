@@ -12,6 +12,8 @@
 
 ### Changed
 
+- Restyle ordinary preview blockquotes with a link-coloured left bar, subtle
+  background tint and tighter spacing, with high-contrast theme support.
 - Rename the extension back to Lapis: package `lapis`, commands and settings
   under `lapis.*`, and matching editor, preview and debug labels.
 - The `.lapis` vault marker is unchanged. Uninstall any older Lapislazuli VSIX

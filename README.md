@@ -55,6 +55,12 @@ Implemented:
 	in the index; diagnostics are unchanged. An unclosed preamble remains visible.
 - Inline code in the native preview uses 90% of the surrounding font size.
 	Code blocks and source-editor font settings are unchanged.
+- Ordinary blockquotes in the preview use an Obsidian-inspired style: a slim
+	link-coloured bar, a subtle tinted background and compact spacing. Text keeps
+	the surrounding colour; high-contrast themes omit the tint. Nested quotes,
+	lists and code retain their Markdown structure. This does not add callout syntax.
+	The accent follows the active VS Code theme's link colour, not a fixed blue;
+	no separate Lapis accent setting is currently provided.
 - GFM task-list markers (`- [ ]`, `- [x]` and `- [X]`) render as read-only
 	checkboxes, including nested and ordered lists. Change their state in the
 	Markdown source; code examples and escaped markers remain ordinary text.
