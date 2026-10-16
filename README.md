@@ -38,6 +38,10 @@ Implemented:
 - The native Markdown preview hides a closed YAML frontmatter preamble, even
 	when the YAML is invalid. Metadata stays editable in the source and available
 	in the index; diagnostics are unchanged. An unclosed preamble remains visible.
+- Preview wikilinks resolve through the same vault index, including heading
+	anchors and unsaved target headings. Missing links have a dotted underline;
+	ambiguous links have a dashed underline and list candidates in their tooltip.
+	Colours follow the VS Code theme. Target changes refresh open previews.
 
 Lapislazuli does not write or reformat your notes in this milestone. There is no
 database, hidden vault metadata, graph view, or proprietary note format.
@@ -87,8 +91,10 @@ zero-based.
 
 Heading references match the heading text exactly; a missing heading opens the
 top of the target note. Editor link ranges include aliases and embed syntax.
-Wikilinks are not yet clickable in the preview, and embeds do not yet render
-target contents.
+Preview links use native Markdown navigation and respect
+`markdown.preview.openMarkdownLinks`. Outside indexed vaults, wikilinks remain
+ordinary Markdown text. Embeds remain raw text in the preview and do not yet
+render target contents.
 
 Resolution checks explicit relative paths, then local/root-relative candidates,
 then a unique basename within the source vault. `/Note` is explicitly
@@ -108,8 +114,10 @@ npx --yes pnpm@10 run package
 Unit tests cover parsing, link resolution, backlinks, and index races.
 Integration tests launch a separate Extension Host against a temporary vault;
 they cover marker discovery and lifecycle, multi-root namespace sharing and
-isolation, index exclusions, native wikilink navigation and preview metadata
-hiding. The runner removes its fixture on exit and
+isolation, index exclusions, native wikilink navigation, preview metadata
+hiding, heading IDs, encoded preview URLs and target lifecycle changes.
+Actual webview clicks and theme appearance also need a manual F5 check.
+The runner removes its fixture on exit and
 uses an isolated VS Code profile.
 By default it downloads VS Code 1.140.0. To use an existing installation:
 
@@ -125,7 +133,7 @@ runtime.
 ## Next Slices
 
 See [the architecture and implementation sequence](docs/architecture.md).
-Next is native Markdown preview wikilinks and editor completion,
+Next is editor completion,
 followed by backlinks UI and practical rename safety, frontmatter mutations,
 Bases/Table, Kanban, Timeline, reminders, and bounded note embedding.
 

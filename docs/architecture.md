@@ -11,6 +11,7 @@ the vault, and no webview may parse or write Markdown.
 | `src/domain` | Portable record, property, heading, link, and issue types. |
 | `src/metadata` | Read frontmatter without changing source text. |
 | `src/markdown` | Shared wikilink tokenization and native preview frontmatter adapter. |
+| `src/preview` | Resolver-backed wikilink rendering and native preview environment/refresh adapter. |
 | `src/index` | Pure note parser/index plus a VS Code event/filesystem adapter. |
 | `src/navigation` | Native Quick Pick over shared records. |
 | `src/language` | Native document links, definitions and ambiguity hovers. |
@@ -42,6 +43,22 @@ preserves source line maps, leaves documents untouched and does not suppress
 index diagnostics. This presentation rule applies to native Markdown previews,
 including documents outside indexed vaults.
 
+Preview wikilinks resolve only for indexed source documents. Resolved links
+emit encoded relative `href` and `data-href` attributes for native navigation;
+missing and ambiguous targets emit distinct, theme-aware non-link spans.
+Embeds remain raw text. Heading records include GitHub-style preview slugs,
+including the native duplicate-heading suffix behavior, separately from their
+exact-match heading text and editor line destinations.
+
+The native adapter is tested against VS Code 1.140.0. Its undocumented
+`currentDocument` environment field is available at rendering, but absent during
+native document tokenization. Affected inlines are reparsed with render context
+and the full inline core pipeline; cached native children are restored afterward.
+This preserves ordinary Markdown outside vaults and automatic links/formatting.
+Open buffers synchronize before resolution. Resolution-relevant index changes
+(membership, paths and headings) debounce `markdown.preview.refresh` by 100 ms;
+disposal cancels pending refreshes and refresh failures are logged.
+
 ## Vaults
 
 `VaultService` discovers `.lapis` markers beneath workspace folders and along
@@ -54,9 +71,6 @@ namespace; independent vaults remain isolated.
 
 ## Planned Boundaries
 
-- **Preview wikilinks:** extend the existing `extendMarkdownIt` hook; recognize tokens during parsing,
-  resolve from the index during rendering. Keep undocumented preview environment
-  fields and refresh commands isolated behind a version-tested adapter.
 - **Additional language providers:** completion and later references share the
   resolver. A native TreeView exposes current-note backlinks.
 - **Mutation service:** re-read the current document, validate the expected
@@ -101,7 +115,8 @@ Both workflows need explicit Extension Host tests before enabling editable views
    limits and dependency refresh. Recursive live transclusion is not an MVP gate.
 
 Dependencies are added per slice. Current runtime libraries are `yaml` and
-`markdown-it` 14.x. React, TanStack Table, drag-and-drop, an expression parser,
+`markdown-it` 14.x, plus CommonJS-compatible `github-slugger` 1.x for native
+heading anchors. React, TanStack Table, drag-and-drop, an expression parser,
 and a proven timeline library are deferred until their respective slices.
 
 No graph view, persistent index database, full formula language, background
