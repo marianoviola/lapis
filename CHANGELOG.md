@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show Open Note immediately and stream indexed notes while scanning.
+- Include unit tests in TypeScript and ESLint checks.
 - Fix escaped-pipe wikilink aliases, including heading links and embeds.
 
 ## 0.0.1 - 2026-10-02

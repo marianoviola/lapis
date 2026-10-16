@@ -53,8 +53,8 @@
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest:integration": "pnpm run compile-tests && pnpm run compile",
-    "check-types": "tsc --noEmit",
-    "lint": "eslint src",
+    "check-types": "tsc -p tsconfig.check.json",
+    "lint": "eslint src tests",
     "test": "vitest run tests",
     "test:integration": "vscode-test"
   },

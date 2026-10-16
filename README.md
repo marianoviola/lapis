@@ -9,7 +9,8 @@ filesystem browser, search environment, and Markdown preview.
 Implemented:
 
 - **Lapis: Open Note** opens a native Quick Pick searchable by title, path, and
-	selected properties. Selecting a note opens the native Markdown editor.
+	selected properties. It opens immediately and updates while indexing continues.
+	Selecting a note opens the native Markdown editor.
 - A shared in-memory index tracks Markdown files, typed frontmatter, headings,
 	body wikilinks, file timestamps, and unsaved editor changes.
 - File creation, modification, deletion, and native renames update the index.

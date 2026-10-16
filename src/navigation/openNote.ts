@@ -10,7 +10,6 @@ export async function openNote(workspace: WorkspaceIndex): Promise<void> {
 		await vscode.window.showInformationMessage('Open a folder to browse notes with Lapis.');
 		return;
 	}
-	await workspace.whenIdle();
 	const picker = vscode.window.createQuickPick<NoteItem>();
 	picker.title = 'Lapis: Open Note';
 	picker.placeholder = 'Find a note by title or path';
@@ -35,6 +34,7 @@ export async function openNote(workspace: WorkspaceIndex): Promise<void> {
 		const previous = picker.items.find(item => item.uri.toString() === active);
 		picker.activeItems = previous ? [previous] : picker.items.slice(0, 1);
 	};
+	let disposed = false;
 	const subscriptions: vscode.Disposable[] = [];
 	subscriptions.push(
 		workspace.notes.onDidChange(update),
@@ -49,15 +49,27 @@ export async function openNote(workspace: WorkspaceIndex): Promise<void> {
 		}),
 	);
 	subscriptions.push(picker.onDidHide(() => {
+		disposed = true;
 		for (const subscription of subscriptions) {
 			subscription.dispose();
 		}
 		picker.dispose();
 	}));
 	update();
-	picker.busy = false;
-	if (!picker.items.length) {
-		picker.placeholder = 'No Markdown notes found in the included workspace folders';
-	}
 	picker.show();
+	void workspace.whenIdle().then(() => {
+		if (disposed) {
+			return;
+		}
+		update();
+		picker.busy = false;
+		if (!picker.items.length) {
+			picker.placeholder = 'No Markdown notes found in the included workspace folders';
+		}
+	}, error => {
+		if (!disposed) {
+			picker.busy = false;
+			void vscode.window.showErrorMessage(`Lapis could not finish indexing: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	});
 }
