@@ -316,6 +316,57 @@ suite('Lapislazuli Extension Host', () => {
 		assert.equal(document.isDirty, false);
 	});
 
+	test('completes vault notes and unsaved headings with native replacement ranges', async () => {
+		const sourceUri = vscode.Uri.joinPath(root, 'Completion source.md');
+		const targetUri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![1].uri, 'Completion target.md');
+		const sourceText = '[[Comp\n[[Comp\\|Alias]]\n[[Completion target#Un]]\n`[[Comp]]`\n```\n[[Comp\n```\n';
+		created.add(sourceUri.toString());
+		created.add(targetUri.toString());
+		await vscode.workspace.fs.writeFile(sourceUri, Buffer.from(sourceText));
+		await vscode.workspace.fs.writeFile(targetUri, Buffer.from('---\ntitle: Completion title\n---\n# Original\n'));
+		await vscode.commands.executeCommand('lapislazuli.rebuildIndex');
+		const source = await vscode.workspace.openTextDocument(sourceUri);
+		const target = await vscode.workspace.openTextDocument(targetUri);
+		const completions = async (line: number, character: number, trigger?: string) => {
+			const result = await vscode.commands.executeCommand<vscode.CompletionList>(
+				'vscode.executeCompletionItemProvider', sourceUri, new vscode.Position(line, character), trigger);
+			return result!.items.filter(item => item.detail === 'workspace-two/Completion target.md');
+		};
+		try {
+			await vscode.window.showTextDocument(source);
+			const notes = await completions(0, 6, '[');
+			assert.equal(notes.length, 1);
+			assert.equal(typeof notes[0].label === 'string' ? notes[0].label : notes[0].label.label, 'Completion title');
+			assert.equal(notes[0].insertText, 'Completion target]]');
+			assert.ok(notes[0].range instanceof vscode.Range);
+			assert.equal(source.getText(notes[0].range), 'Comp');
+			const aliases = await completions(1, 6);
+			assert.equal(aliases[0].insertText, 'Completion target\\|Alias]]');
+			const edit = new vscode.WorkspaceEdit();
+			edit.replace(targetUri, new vscode.Range(3, 0, 3, 10), '# Unsaved heading');
+			await vscode.workspace.applyEdit(edit);
+			const headings = await completions(2, 22, '#');
+			assert.equal(headings.length, 1);
+			assert.equal(headings[0].insertText, 'Unsaved heading]]');
+			assert.ok(headings[0].range instanceof vscode.Range);
+			assert.equal(source.getText(headings[0].range), 'Un]]');
+			assert.equal((await completions(3, 7)).length, 0);
+			assert.equal((await completions(5, 6)).length, 0);
+			const insertion = new vscode.WorkspaceEdit();
+			insertion.replace(sourceUri, notes[0].range, notes[0].insertText);
+			await vscode.workspace.applyEdit(insertion);
+			assert.ok(source.getText().startsWith('[[Completion target]]\n'));
+			assert.equal(api.resolveLink('Completion target', sourceUri.toString()).kind, 'resolved');
+			assert.equal(new TextDecoder().decode(await vscode.workspace.fs.readFile(sourceUri)), sourceText);
+			assert.ok(new TextDecoder().decode(await vscode.workspace.fs.readFile(targetUri)).includes('# Original'));
+		} finally {
+			for (const document of [source, target]) {
+				await vscode.window.showTextDocument(document);
+				await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+			}
+		}
+	});
+
 	test('does not index a workspace until a .lapis marker is created, then removes its notes when deleted', async () => {
 		const folder = vscode.workspace.workspaceFolders![3].uri;
 		const note = vscode.Uri.joinPath(folder, 'Unmarked.md');
