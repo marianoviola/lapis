@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import * as vscode from 'vscode';
+import MarkdownIt from 'markdown-it';
 import type { LapislazuliApi } from '../extension';
 import type { NoteRecord } from '../domain/note';
 
@@ -126,6 +127,93 @@ suite('Lapislazuli Extension Host', () => {
 		assert.ok(html?.includes('data-line="5"'), 'The native preview must retain source line mapping');
 		assert.equal(document.getText(), original);
 		assert.equal(document.isDirty, false);
+	});
+
+	test('renders native preview wikilinks with encoded paths, native heading IDs and unsaved targets', async () => {
+		const sourceUri = vscode.Uri.joinPath(root, 'Preview source.md');
+		const targetUri = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![1].uri, 'Preview target %?.md');
+		created.add(sourceUri.toString());
+		created.add(targetUri.toString());
+		const heading = 'Héllo, World! code';
+		const sourceText = `[[Preview target %?.md#${heading}|Go]] [[Preview missing]] ![[Welcome]]\n`;
+		await vscode.workspace.fs.writeFile(sourceUri, Buffer.from(sourceText));
+		await vscode.workspace.fs.writeFile(targetUri, Buffer.from('# Original\n'));
+		await vscode.commands.executeCommand('lapislazuli.rebuildIndex');
+		const source = await vscode.workspace.openTextDocument(sourceUri);
+		const target = await vscode.workspace.openTextDocument(targetUri);
+		try {
+			const edit = new vscode.WorkspaceEdit();
+			edit.insert(targetUri, new vscode.Position(0, 0),
+				'# Héllo, *World*! `code`\n# Repeat\n# Repeat\n# Repeat-1\n# A [[Welcome|label]] B\n\n');
+			assert.ok(await vscode.workspace.applyEdit(edit));
+			const html = await vscode.commands.executeCommand<string>('markdown.api.render', source);
+			const targetHtml = await vscode.commands.executeCommand<string>('markdown.api.render', target);
+			assert.ok(targetHtml?.includes('id="héllo-world-code"'));
+			assert.deepEqual([...targetHtml!.matchAll(/<h\d\b[^>]*\bid="([^"]*)"/g)].map(match => match[1]),
+				api.getNote(targetUri.toString())?.headings.map(heading => heading.slug));
+			assert.ok(html?.includes('href="./../workspace-two/Preview%20target%20%25%3F.md#h%C3%A9llo-world-code"'), html);
+			assert.ok(html?.includes('>Go</a>'));
+			assert.ok(html?.includes('lapislazuli-wikilink-missing'));
+			assert.ok(html?.includes('![[Welcome]]'));
+			assert.equal(source.isDirty, false);
+			assert.equal(new TextDecoder().decode(await vscode.workspace.fs.readFile(targetUri)), '# Original\n');
+			const unmarked = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(vscode.workspace.workspaceFolders![3].uri, 'Unmarked.md'));
+			const outside = await vscode.commands.executeCommand<string>('markdown.api.render', {
+				uri: unmarked.uri, version: unmarked.version,
+				getText: () => '[[Welcome|raw]]',
+			});
+			assert.ok(outside?.includes('[[Welcome|raw]]'));
+			assert.ok(!outside?.includes('lapislazuli-wikilink'));
+		} finally {
+			await vscode.window.showTextDocument(target);
+			await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+		}
+	});
+
+	test('preserves cached native tokens, automatic links and formatting when rendering wikilinks', () => {
+		const markdown = api.extendMarkdownIt(new MarkdownIt({ linkify: true, typographer: true }));
+		const text = '[[Welcome|Go]] https://example.com "quote" [reference][id]\n\n[id]: https://example.com/ref';
+		const tokens = markdown.parse(text, {});
+		const original = JSON.stringify(tokens);
+		const html = markdown.renderer.render(tokens, markdown.options, {
+			currentDocument: vscode.Uri.joinPath(root, 'Welcome.md'),
+		});
+		assert.ok(html.includes('class="lapislazuli-wikilink"'));
+		assert.ok(html.includes('<a href="https://example.com">'));
+		assert.ok(html.includes('<a href="https://example.com/ref">reference</a>'));
+		assert.ok(html.includes('“quote”'));
+		assert.equal(JSON.stringify(tokens), original);
+		const outside = markdown.renderer.render(tokens, markdown.options, {
+			currentDocument: vscode.Uri.joinPath(vscode.workspace.workspaceFolders![3].uri, 'Unmarked.md'),
+		});
+		assert.ok(outside.includes('[[Welcome|Go]]'));
+		assert.ok(!outside.includes('lapislazuli-wikilink'));
+		assert.equal(JSON.stringify(tokens), original);
+	});
+
+	test('updates preview resolution for unchanged sources as targets appear, conflict and disappear', async () => {
+		const sourceUri = vscode.Uri.joinPath(root, 'Preview lifecycle.md');
+		const first = vscode.Uri.joinPath(root, 'Projects', 'Preview later.md');
+		const second = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![1].uri, 'Preview later.md');
+		for (const uri of [sourceUri, first, second]) {
+			created.add(uri.toString());
+		}
+		await vscode.workspace.fs.writeFile(sourceUri, Buffer.from('[[Preview later#Heading|Later]]'));
+		await vscode.commands.executeCommand('lapislazuli.rebuildIndex');
+		const source = await vscode.workspace.openTextDocument(sourceUri);
+		const render = () => vscode.commands.executeCommand<string>('markdown.api.render', source);
+		assert.ok((await render())?.includes('wikilink-missing'));
+		await observe(first, note => !!note,
+			() => vscode.workspace.fs.writeFile(first, Buffer.from('# Heading')));
+		assert.ok((await render())?.includes('href="./Projects/Preview%20later.md#heading"'));
+		await observe(second, note => !!note,
+			() => vscode.workspace.fs.writeFile(second, Buffer.from('# Heading')));
+		assert.ok((await render())?.includes('wikilink-ambiguous'));
+		await observe(first, note => !note, () => vscode.workspace.fs.delete(first));
+		assert.ok((await render())?.includes('href="./../workspace-two/Preview%20later.md#heading"'));
+		await observe(second, note => !note, () => vscode.workspace.fs.delete(second));
+		assert.ok((await render())?.includes('wikilink-missing'));
+		assert.equal(source.isDirty, false);
 	});
 
 	test('navigates wikilinks with fresh unsaved source/target buffers and heading fallbacks', async () => {

@@ -6,7 +6,7 @@ import { WorkspaceIndex } from './index/workspaceIndex';
 import { openNote } from './navigation/openNote';
 import { VaultService } from './vault/vaultService';
 import { registerWikilinkNavigation } from './language/links';
-import { previewFrontmatter } from './markdown/preview';
+import { nativePreview } from './preview/nativePreview';
 
 export interface LapislazuliApi {
 	extendMarkdownIt(markdown: MarkdownIt): MarkdownIt;
@@ -22,8 +22,9 @@ export function activate(context: vscode.ExtensionContext): LapislazuliApi {
 	const output = vscode.window.createOutputChannel('Lapislazuli', { log: true });
 	const vaults = new VaultService(output);
 	const workspace = new WorkspaceIndex(output, vaults);
+	const preview = nativePreview(workspace, output);
 	context.subscriptions.push(
-		output, vaults, workspace,
+		output, vaults, workspace, preview,
 		registerWikilinkNavigation(workspace),
 		vscode.commands.registerCommand('lapislazuli.openNote', () => openNote(workspace)),
 		vscode.commands.registerCommand('lapislazuli.rebuildIndex', async () => {
@@ -32,7 +33,7 @@ export function activate(context: vscode.ExtensionContext): LapislazuliApi {
 		}),
 	);
 	return {
-		extendMarkdownIt: previewFrontmatter,
+		extendMarkdownIt: markdown => preview.extendMarkdownIt(markdown),
 		onDidChange: listener => workspace.notes.onDidChange(listener),
 		getNotes: () => workspace.notes.getNotes(),
 		getNote: uri => workspace.notes.get(uri),

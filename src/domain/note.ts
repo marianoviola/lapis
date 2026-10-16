@@ -26,6 +26,7 @@ export interface NoteLinkOccurrence extends NoteLink {
 
 export interface Heading {
 	readonly text: string;
+	readonly slug: string;
 	readonly level: number;
 	readonly line: number;
 }

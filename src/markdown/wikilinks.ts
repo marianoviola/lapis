@@ -5,8 +5,11 @@ export interface WikilinkToken extends NoteLink {
 	readonly inlineOffset: number;
 }
 
-export function wikilinks(markdown: MarkdownIt): void {
+export function wikilinks(markdown: MarkdownIt, enabled?: (env: unknown) => boolean): void {
 	markdown.inline.ruler.before('link', 'lapis_wikilink', (state, silent) => {
+		if (enabled && !enabled(state.env)) {
+			return false;
+		}
 		if ('linkLevel' in state && typeof state.linkLevel === 'number' && state.linkLevel > 0) {
 			return false;
 		}

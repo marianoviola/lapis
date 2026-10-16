@@ -1,4 +1,6 @@
 import MarkdownIt from 'markdown-it';
+import GithubSlugger from 'github-slugger';
+import type Token from 'markdown-it/lib/token.mjs' with { 'resolution-mode': 'import' };
 import { Heading, NoteLink, NoteLinkOccurrence, NoteRecord, NoteSource, SourceRange } from '../domain/note';
 import { readFrontmatter } from '../metadata/frontmatter';
 import { wikilinks, WikilinkToken } from '../markdown/wikilinks';
@@ -9,6 +11,7 @@ export function parseNote(source: NoteSource): NoteRecord {
 	const frontmatter = readFrontmatter(source.text);
 	const tokens = markdown.parse(frontmatter.body, {});
 	const headings: Heading[] = [];
+	const headingSlugs = new Map<string, number>();
 	const links: NoteLinkOccurrence[] = [];
 	const lines = frontmatter.body.split(/\r\n?|\n/);
 	const lineOffsets = [source.text.length - frontmatter.body.length];
@@ -26,7 +29,13 @@ export function parseNote(source: NoteSource): NoteRecord {
 				}
 				return ['text', 'code_inline', 'image'].includes(child.type) ? child.content : '';
 			}).join('');
-			headings.push(Object.freeze({ text, level: Number(token.tag.slice(1)), line: (token.map?.[0] ?? 0) + frontmatter.bodyLine }));
+			const base = GithubSlugger.slug(previewHeadingText(inline).trim());
+			const count = headingSlugs.get(base) ?? 0;
+			headingSlugs.set(base, count + 1);
+			headings.push(Object.freeze({
+				text, slug: count ? `${base}-${count}` : base,
+				level: Number(token.tag.slice(1)), line: (token.map?.[0] ?? 0) + frontmatter.bodyLine,
+			}));
 		}
 		const inlineLines = token.content.split('\n');
 		const inlineLineOffsets = [0];
@@ -73,6 +82,13 @@ export function parseNote(source: NoteSource): NoteRecord {
 		issues: Object.freeze(frontmatter.issues), dirty: source.dirty,
 		documentVersion: source.documentVersion, ctime: source.ctime, mtime: source.mtime,
 	});
+}
+
+function previewHeadingText(token: Token): string {
+	if (token.children) {
+		return token.children.map(previewHeadingText).join('');
+	}
+	return ['text', 'emoji', 'code_inline'].includes(token.type) ? token.content : '';
 }
 
 function occurrence(link: NoteLink, raw: string, start: number): NoteLinkOccurrence {

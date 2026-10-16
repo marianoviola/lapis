@@ -13,7 +13,7 @@ describe('note parsing', () => {
 		const record = note('---\ntitle: My note\ndue: 2026-10-20\nactive: true\ncount: 3\ntags: [one, two]\nextra:\n  value: null\n---\n# Heading\nBody');
 		expect(record.title).toBe('My note');
 		expect(record.properties).toMatchObject({ due: '2026-10-20', active: true, count: 3, tags: ['one', 'two'], extra: { value: null } });
-		expect(record.headings).toEqual([{ text: 'Heading', level: 1, line: 9 }]);
+		expect(record.headings).toEqual([{ text: 'Heading', slug: 'heading', level: 1, line: 9 }]);
 	});
 	it('recognizes links, aliases, headings and embeds outside code', () => {
 		const record = note('[[Note]] [[Other|Label]] [[Other#Heading]] ![[Other.md]] [[#Local]]\n`[[Inline]]` \\[[Escaped]]\n\n```md\n[[Fenced]]\n```\n\n    [[Indented]]');
