@@ -2,6 +2,38 @@
 	font-size: 0.9em;
 }
 
+blockquote {
+	margin: 1em 0;
+	padding: 0.5em 1em;
+	border: 0;
+	border-left: 3px solid var(--vscode-textLink-foreground);
+	border-radius: 0 4px 4px 0;
+	color: inherit;
+	background-color: var(--vscode-textBlockQuote-background, transparent);
+	background-color: color-mix(in srgb, var(--vscode-textLink-foreground) 6%, transparent);
+}
+
+blockquote > :first-child {
+	margin-top: 0;
+}
+
+blockquote > :last-child {
+	margin-bottom: 0;
+}
+
+.vscode-high-contrast blockquote,
+.vscode-high-contrast-light blockquote {
+	border-left-color: var(--vscode-contrastActiveBorder, var(--vscode-textLink-foreground));
+	background-color: transparent;
+}
+
+@media (forced-colors: active) {
+	blockquote {
+		border-left-color: Highlight;
+		background-color: Canvas;
+	}
+}
+
 mark {
 	color: var(--vscode-editor-foreground);
 	background-color: var(--vscode-editor-findMatchHighlightBackground);
