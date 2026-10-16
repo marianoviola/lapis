@@ -129,6 +129,31 @@ export class WorkspaceIndex implements vscode.Disposable {
 		} while (scan !== this.scan || this.timers.size);
 	}
 
+	synchronizeOpenDocuments(): void {
+		for (const document of vscode.workspace.textDocuments) {
+			const id = document.uri.toString();
+			const note = this.notes.get(id);
+			if (document.isClosed || !note || note.documentVersion === document.version) {
+				continue;
+			}
+			const scope = this.scope(document.uri);
+			if (!scope) {
+				this.notes.remove(id);
+				continue;
+			}
+			const text = document.getText();
+			if (Buffer.byteLength(text, 'utf8') > maxNoteBytes) {
+				this.output.warn(`Skipped ${id}: exceeds the 2 MiB note limit.`);
+				this.notes.remove(id);
+				continue;
+			}
+			this.notes.upsert({
+				uri: id, rootUri: scope.rootUri, relativePath: scope.relativePath, text,
+				dirty: document.isDirty, documentVersion: document.version, ctime: note.ctime, mtime: note.mtime,
+			});
+		}
+	}
+
 	dispose(): void {
 		this.disposed = true;
 		this.scanGeneration++;

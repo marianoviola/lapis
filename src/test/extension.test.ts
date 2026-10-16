@@ -116,6 +116,106 @@ suite('Lapislazuli Extension Host', () => {
 		assert.equal(api.getNote(independentNote.toString())?.rootUri, independentFolder.toString());
 	});
 
+	test('navigates wikilinks with fresh unsaved source/target buffers and heading fallbacks', async () => {
+		const sourceUri = vscode.Uri.joinPath(root, 'Navigation source.md');
+		const targetUri = vscode.Uri.joinPath(root, 'Navigation target %.md');
+		created.add(sourceUri.toString());
+		created.add(targetUri.toString());
+		const sourceText = '# Local\n\n`[[Navigation target %#Changed]]` [[Navigation target %#Changed\\|Go]] ![[Navigation target %]] [[#Local]] [[Navigation target %#Absent]] [[Missing]]\n';
+		await vscode.workspace.fs.writeFile(sourceUri, Buffer.from(sourceText));
+		await vscode.workspace.fs.writeFile(targetUri, Buffer.from('# Original\n'));
+		await vscode.commands.executeCommand('lapislazuli.rebuildIndex');
+		const source = await vscode.workspace.openTextDocument(sourceUri);
+		const target = await vscode.workspace.openTextDocument(targetUri);
+		try {
+			const edit = new vscode.WorkspaceEdit();
+			edit.insert(sourceUri, new vscode.Position(0, 0), 'prefix\n\n');
+			edit.insert(targetUri, new vscode.Position(0, 0), 'intro\n\n## Changed\n\n');
+			assert.ok(await vscode.workspace.applyEdit(edit));
+			const editor = await vscode.window.showTextDocument(source, vscode.ViewColumn.One);
+			const offset = source.getText().indexOf('\\|Go');
+			const position = source.positionAt(offset);
+			const definitions = await vscode.commands.executeCommand<(vscode.Location | vscode.DefinitionLink)[]>(
+				'vscode.executeDefinitionProvider', sourceUri, position);
+			assert.equal(definitions?.length, 1);
+			const definition = definitions![0];
+			assert.ok('uri' in definition);
+			assert.equal(definition.uri.toString(), targetUri.toString());
+			assert.equal(definition.range.start.line, 2);
+
+			const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>('vscode.executeLinkProvider', sourceUri, 100);
+			const wikilinks = links!.filter(link => link.tooltip?.startsWith('Open '));
+			assert.equal(wikilinks.length, 4);
+			assert.deepEqual(wikilinks.map(link => source.getText(link.range)), [
+				'[[Navigation target %#Changed\\|Go]]', '![[Navigation target %]]', '[[#Local]]', '[[Navigation target %#Absent]]',
+			]);
+			assert.equal(wikilinks[0].target?.fragment, 'L3');
+			assert.equal(wikilinks[3].target?.fragment, 'L1');
+			assert.equal(wikilinks[2].target?.with({ fragment: '' }).toString(), sourceUri.toString());
+			assert.equal(wikilinks[2].target?.fragment, 'L3');
+			const codeDefinitions = await vscode.commands.executeCommand<unknown[]>(
+				'vscode.executeDefinitionProvider', sourceUri, source.positionAt(source.getText().indexOf('Navigation target %')));
+			assert.equal(codeDefinitions?.length, 0);
+
+			editor.selection = new vscode.Selection(position, position);
+			await vscode.commands.executeCommand('editor.action.revealDefinition');
+			assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), targetUri.toString());
+			assert.equal(vscode.window.activeTextEditor?.selection.start.line, 2);
+			assert.equal(vscode.window.activeTextEditor?.viewColumn, vscode.ViewColumn.One);
+			await vscode.window.showTextDocument(source, vscode.ViewColumn.One);
+			await vscode.commands.executeCommand('vscode.open', wikilinks[0].target);
+			assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), targetUri.toString());
+			assert.equal(vscode.window.activeTextEditor?.selection.start.line, 2);
+			assert.equal(new TextDecoder().decode(await vscode.workspace.fs.readFile(sourceUri)), sourceText);
+			assert.equal(new TextDecoder().decode(await vscode.workspace.fs.readFile(targetUri)), '# Original\n');
+		} finally {
+			for (const document of [source, target]) {
+				await vscode.window.showTextDocument(document);
+				await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+			}
+		}
+	});
+
+	test('does not navigate missing, ambiguous, excluded or out-of-vault wikilinks', async () => {
+		const sourceUri = vscode.Uri.joinPath(root, 'Ambiguous source.md');
+		const paths = ['one', 'two'].map(folder => vscode.Uri.joinPath(root, folder));
+		created.add(sourceUri.toString());
+		for (const path of paths) {
+			created.add(path.toString());
+			await vscode.workspace.fs.createDirectory(path);
+			await vscode.workspace.fs.writeFile(vscode.Uri.joinPath(path, 'Duplicate.md'), Buffer.from('# Duplicate\n'));
+		}
+		await vscode.workspace.fs.writeFile(sourceUri, Buffer.from('[[Duplicate]] [[Private]] [[Ignored]] [[Absent]]\n'));
+		await vscode.commands.executeCommand('lapislazuli.rebuildIndex');
+		const document = await vscode.workspace.openTextDocument(sourceUri);
+		const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>('vscode.executeLinkProvider', sourceUri);
+		assert.equal(links?.filter(link => link.tooltip?.startsWith('Open ')).length, 0);
+		const definitions = await vscode.commands.executeCommand<unknown[]>(
+			'vscode.executeDefinitionProvider', sourceUri, new vscode.Position(0, 3));
+		assert.equal(definitions?.length, 0);
+		const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
+			'vscode.executeHoverProvider', sourceUri, new vscode.Position(0, 3));
+		const text = hovers!.flatMap(hover => hover.contents.map(content => typeof content === 'string' ? content : content.value)).join('\n').replace(/\\/g, '');
+		assert.ok(text.includes('one/Duplicate.md') && text.includes('two/Duplicate.md'));
+		const outside = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![3].uri, 'Outside.md');
+		const excluded = vscode.Uri.joinPath(root, 'node_modules', 'Excluded links.md');
+		for (const uri of [outside, excluded]) {
+			created.add(uri.toString());
+			await vscode.workspace.fs.writeFile(uri, Buffer.from('[[Welcome]]\n'));
+		}
+		for (const uri of [
+			vscode.Uri.joinPath(vscode.workspace.workspaceFolders![2].uri, 'Private.md'),
+			outside, excluded,
+		]) {
+			await vscode.workspace.openTextDocument(uri);
+			const result = await vscode.commands.executeCommand<vscode.DocumentLink[]>('vscode.executeLinkProvider', uri);
+			assert.equal(result?.filter(link => link.tooltip?.startsWith('Open ')).length, 0);
+			const definitions = await vscode.commands.executeCommand<unknown[]>('vscode.executeDefinitionProvider', uri, new vscode.Position(0, 4));
+			assert.equal(definitions?.length, 0);
+		}
+		assert.equal(document.isDirty, false);
+	});
+
 	test('does not index a workspace until a .lapis marker is created, then removes its notes when deleted', async () => {
 		const folder = vscode.workspace.workspaceFolders![3].uri;
 		const note = vscode.Uri.joinPath(folder, 'Unmarked.md');

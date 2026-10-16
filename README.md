@@ -31,7 +31,10 @@ Implemented:
 	filesystem events. The **Lapislazuli** Output channel reports discovery and
 	read failures.
 - The data layer supports root-scoped link resolution and cached backlinks.
-	Neither is exposed as preview rendering or a backlinks sidebar yet.
+	Backlinks are not exposed as a sidebar yet.
+- Wikilinks support **Cmd/Ctrl+click** and **F12** in the Markdown source editor,
+	including heading destinations and unsaved buffers. Ambiguous links show a
+	hover listing candidates instead of guessing a destination.
 
 Lapislazuli does not write or reformat your notes in this milestone. There is no
 database, hidden vault metadata, graph view, or proprietary note format.
@@ -79,6 +82,11 @@ and escaped syntax. Escaped alias separators (`[[Note\|Label]]`) are supported
 inside Markdown tables and ordinary body text. Heading line numbers are
 zero-based.
 
+Heading references match the heading text exactly; a missing heading opens the
+top of the target note. Editor link ranges include aliases and embed syntax.
+Wikilinks are not yet clickable in the preview, and embeds do not yet render
+target contents.
+
 Resolution checks explicit relative paths, then local/root-relative candidates,
 then a unique basename within the source vault. `/Note` is explicitly
 vault-root-relative. Names are case-sensitive, ambiguous matches are not
@@ -97,7 +105,8 @@ npx --yes pnpm@10 run package
 Unit tests cover parsing, link resolution, backlinks, and index races.
 Integration tests launch a separate Extension Host against a temporary vault;
 they cover marker discovery and lifecycle, multi-root namespace sharing and
-isolation, and index exclusions. The runner removes its fixture on exit and
+isolation, index exclusions, and native wikilink navigation. The runner removes
+its fixture on exit and
 uses an isolated VS Code profile.
 By default it downloads VS Code 1.140.0. To use an existing installation:
 
@@ -113,7 +122,7 @@ runtime.
 ## Next Slices
 
 See [the architecture and implementation sequence](docs/architecture.md).
-Next is native Markdown preview wikilinks and editor completion/definitions,
+Next is native Markdown preview wikilinks and editor completion,
 followed by backlinks UI and practical rename safety, frontmatter mutations,
 Bases/Table, Kanban, Timeline, reminders, and bounded note embedding.
 

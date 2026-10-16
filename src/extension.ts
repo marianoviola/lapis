@@ -4,6 +4,7 @@ import { Resolution } from './index/noteIndex';
 import { WorkspaceIndex } from './index/workspaceIndex';
 import { openNote } from './navigation/openNote';
 import { VaultService } from './vault/vaultService';
+import { registerWikilinkNavigation } from './language/links';
 
 export interface LapislazuliApi {
 	onDidChange(listener: (uri: string) => void): vscode.Disposable;
@@ -20,6 +21,7 @@ export function activate(context: vscode.ExtensionContext): LapislazuliApi {
 	const workspace = new WorkspaceIndex(output, vaults);
 	context.subscriptions.push(
 		output, vaults, workspace,
+		registerWikilinkNavigation(workspace),
 		vscode.commands.registerCommand('lapislazuli.openNote', () => openNote(workspace)),
 		vscode.commands.registerCommand('lapislazuli.rebuildIndex', async () => {
 			await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'Lapislazuli: Rebuilding note index' }, () => workspace.rebuild());

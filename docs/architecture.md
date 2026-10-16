@@ -13,6 +13,7 @@ the vault, and no webview may parse or write Markdown.
 | `src/markdown` | Shared wikilink tokenization grammar. |
 | `src/index` | Pure note parser/index plus a VS Code event/filesystem adapter. |
 | `src/navigation` | Native Quick Pick over shared records. |
+| `src/language` | Native document links, definitions and ambiguity hovers. |
 | `src/extension.ts` | Composition, command registration, read-only API. |
 
 The pure index has no VS Code dependency. URI strings are identity; root-scoped
@@ -26,6 +27,14 @@ The workspace adapter registers events before discovery, reads at most eight
 notes concurrently, and debounces per-note changes. Open buffers overlay disk
 content, while source filesystem timestamps remain filesystem metadata. Native
 rename tracking changes records but deliberately does not mutate link text.
+
+Wikilink occurrences carry immutable absolute UTF-16 offset ranges (end
+exclusive) for the full syntax, target, heading and label. The tokenizer records
+inline offsets; the parser maps them through block prefixes and original line
+endings, so identical text inside code spans cannot steal a link's range.
+Language providers use the shared index and synchronize open document versions
+before serving requests. Document link targets resolve lazily when first
+followed, using the current target headings rather than a parsing-time URI.
 
 ## Vaults
 
@@ -42,7 +51,7 @@ namespace; independent vaults remain isolated.
 - **Preview adapter:** export `extendMarkdownIt`; recognize tokens during parsing,
   resolve from the index during rendering. Keep undocumented preview environment
   fields and refresh commands isolated behind a version-tested adapter.
-- **Language providers:** definitions, completion, and later references share the
+- **Additional language providers:** completion and later references share the
   resolver. A native TreeView exposes current-note backlinks.
 - **Mutation service:** re-read the current document, validate the expected
   revision, plan source-token/YAML-aware edits, and use `WorkspaceEdit`. Preserve
