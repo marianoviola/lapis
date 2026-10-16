@@ -20,6 +20,11 @@
 
 ### Changed
 
+- Insert table rows compactly without reformatting existing rows, starting in
+  the first cell with native Tab/Shift+Tab snippet navigation between cells.
+- Insert table columns compactly, preserving existing cell content and padding,
+  with native Tab/Shift+Tab navigation from the header down the new column,
+  skipping the separator and completing missing cells in ragged tables.
 - Treat commands as the primary content-authoring interface. Wikilink editor
   completion is now opt-in via `lapis.wikilinkCompletion` (default `false`);
   VS Code and Copilot suggestion settings remain untouched.

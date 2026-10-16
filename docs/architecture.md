@@ -60,7 +60,12 @@ Selected text supplies the alias default, and table aliases escape the pipe.
 Table operations use markdown-it source maps for detection and a pure cell model
 for escaped pipes, code spans, alignment and display-width padding. Commands
 replace only the target table, preserve EOL/container prefixes, and restore a
-logical cursor position. Code Actions carry source URI/version guards. There is
+logical cursor position. Code Actions carry source URI/version guards. One
+exception to structural reformatting is row/column insertion: rows preserve all
+existing lines, while columns preserve existing cell text and padding, completing
+ragged rows as needed. Both insert compact cells with native snippet tab stops:
+across a row from its first cell, or down a column from its header, skipping the
+separator. Empty cells are not padded to the widest content. There is
 no document formatter or automatic save, and table commands have no vault
 dependency.
 

@@ -114,6 +114,17 @@ prefixes and line endings, keep the cursor in a logical cell, and use one undo
 step. Formatting is idempotent and pads to the widest cell without a width cap
 or content truncation; CJK and emoji display widths are considered.
 
+Row insertion leaves existing rows unchanged and adds a compact row such as
+`|  |  |`, with the cursor in its first cell. Tab moves to the next cell and
+Shift+Tab returns to the previous one using native snippet navigation; the last
+Tab exits after the row. Use **Format Table** when ready to align the padding.
+
+Column insertion also adds compact empty cells without changing existing cell
+content or padding. The cursor starts in the new header cell; Tab proceeds down
+the new column, skipping the separator, and Shift+Tab goes back. The last Tab
+exits at the end of the last editable row. Missing cells in ragged tables are
+completed so the new column has the same position throughout the table.
+
 Escaped pipes and pipes inside code spans are preserved. Native GFM previews
 still require escaped pipes inside code spans to render those cells correctly.
 Code fences and frontmatter are excluded. The header/separator and last column
