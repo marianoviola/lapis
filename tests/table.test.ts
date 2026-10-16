@@ -52,9 +52,13 @@ describe('Markdown table editing', () => {
 		expect(table.rows[2]).toEqual(['apple', '2']);
 	});
 
-	it.each(['insertRowAbove', 'insertRowBelow'] as const)('inserts a body row with %s and returns its cell', operation => {
-		const result = apply(source, operation);
+	it.each(['insertRowAbove', 'insertRowBelow'] as const)('inserts a compact body row with %s and first-cell tab stops', operation => {
+		const result = apply(source, operation, 2, 1);
 		const table = findTable(result.text, 0)!;
+		expect(result.text.split('\n')[result.row]).toBe('|  |  |');
+		expect(result.text.split('\n').filter((_, index) => index !== result.row).join('\n')).toBe(source);
+		expect(result.column).toBe(2);
+		expect(result.tabStops).toEqual([{ row: result.row, column: 2 }, { row: result.row, column: 5 }]);
 		expect(table.rows[result.row]).toEqual(['', '']);
 		expect(table.rows).toHaveLength(5);
 		expect(result.row).toBe(operation === 'insertRowAbove' ? 2 : 3);
@@ -64,6 +68,16 @@ describe('Markdown table editing', () => {
 		const result = apply('| A |\n| --- |', 'insertRowAbove', 0);
 		expect(result.row).toBe(2);
 		expect(findTable(result.text, 0)?.rows).toHaveLength(3);
+		expect(result.text).toBe('| A |\n| --- |\n|  |');
+		expect(result.tabStops).toEqual([{ row: 2, column: 2 }]);
+	});
+
+	it('inserts compact rows preserving CRLF, container prefixes and ragged extra columns', () => {
+		const text = '- > | A | B |\r\n  > | --- | --- |\r\n  > | x | y | extra |';
+		const table = findTable(text, 2)!;
+		const result = editTable(table, 'insertRowAbove', 2, 2, '\r\n');
+		expect(result.text).toBe('- > | A | B |\r\n  > | --- | --- |\r\n  > |  |  |  |\r\n  > | x | y | extra |');
+		expect(result.tabStops).toEqual([6, 9, 12].map(column => ({ row: 2, column })));
 	});
 
 	it('deletes body rows but refuses to remove the header or separator', () => {
@@ -75,13 +89,54 @@ describe('Markdown table editing', () => {
 		expect(apply('| A |\n| --- |\n| value |', 'deleteRow').row).toBe(0);
 	});
 
-	it.each(['insertColumnLeft', 'insertColumnRight'] as const)('inserts a column with %s', operation => {
+	it.each(['insertColumnLeft', 'insertColumnRight'] as const)('inserts a compact column with %s starting in its header', operation => {
 		const result = apply(source, operation);
 		const table = findTable(result.text, 0)!;
 		const column = operation === 'insertColumnLeft' ? 0 : 1;
 		expect(table.rows[2][column]).toBe('');
 		expect(table.rows[0]).toHaveLength(3);
+		expect(result.row).toBe(0);
 		expect(tableCell(table, result.row, result.column).column).toBe(column);
+		expect(result.text).toBe(operation === 'insertColumnLeft'
+			? '|  | Name | Qty |\n| --- | :--- | ---: |\n|  | apple | 2 |\n|  | pear | 10 |'
+			: '| Name |  | Qty |\n| :--- | --- | ---: |\n| apple |  | 2 |\n| pear |  | 10 |');
+		expect(result.tabStops?.map(stop => stop.row)).toEqual([0, 2, 3]);
+		expect(table.alignments).toEqual(operation === 'insertColumnLeft'
+			? ['default', 'left', 'right'] : ['left', 'default', 'right']);
+	});
+
+	it('appends compact columns without outer pipes, preserving source whitespace and escaped cells', () => {
+		const text = 'Name | Qty\n:--- | ---:\n `$value\\path` | [[Note\\|Alias]]  ';
+		const result = apply(text, 'insertColumnRight', 2, 1);
+		expect(result.text).toBe('Name | Qty|  |\n:--- | ---:| --- |\n `$value\\path` | [[Note\\|Alias]]  |  |');
+		expect(findTable(result.text, 0)?.rows[2]).toEqual(['`$value\\path`', '[[Note\\|Alias]]', '']);
+		expect(result.tabStops).toEqual([{ row: 0, column: 12 }, { row: 2, column: text.split('\n')[2].length + 2 }]);
+		const left = apply(text, 'insertColumnLeft');
+		expect(left.text).toBe('|  |Name | Qty\n| --- |:--- | ---:\n |  |`$value\\path` | [[Note\\|Alias]]  ');
+		expect(findTable(left.text, 0)?.rows[0]).toEqual(['', 'Name', 'Qty']);
+	});
+
+	it('inserts columns preserving CRLF, containers and ragged missing or extra cells', () => {
+		const text = '- > | A | B |\r\n  > | :--- | ---: |\r\n  > | x |\r\n  > | y | z | extra |';
+		const result = editTable(findTable(text, 0)!, 'insertColumnRight', 0, 1, '\r\n');
+		expect(result.text).toBe('- > | A | B |  |  |\r\n  > | :--- | ---: | --- | --- |\r\n  > | x |  |  |  |\r\n  > | y | z |  | extra |');
+		expect(findTable(result.text, 0)?.rows.map(row => row.length)).toEqual([4, 4, 4, 4]);
+		expect(result.tabStops).toEqual([{ row: 0, column: 14 }, { row: 2, column: 13 }, { row: 3, column: 14 }]);
+	});
+
+	it('inserts a compact column in a header-only table', () => {
+		const result = apply('| A |\n| --- |', 'insertColumnLeft', 0);
+		expect(result.text).toBe('|  | A |\n| --- | --- |');
+		expect(result.tabStops).toEqual([{ row: 0, column: 2 }]);
+	});
+
+	it('keeps a trailing backslash from escaping an appended column boundary', () => {
+		const text = 'A | B\n--- | ---\nx | path\\';
+		const result = apply(text, 'insertColumnRight', 2, 1);
+		expect(findTable(result.text, 0)?.rows[2]).toEqual(['x', 'path\\', '']);
+		expect(result.text.split('\n')[2]).toBe('x | path\\ |  |');
+		const ragged = apply(text + '\ny | z | extra', 'insertColumnRight', 2, 1);
+		expect(findTable(ragged.text, 0)?.rows[2]).toEqual(['x', 'path\\', '', '']);
 	});
 
 	it('deletes a column, retaining alignment, and refuses to remove the last column', () => {

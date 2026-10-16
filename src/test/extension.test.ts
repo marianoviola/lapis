@@ -150,9 +150,11 @@ suite('Lapis Extension Host', () => {
 				action instanceof vscode.CodeAction && action.command?.command === 'lapis.table.insertColumnRight');
 			assert.ok(insert?.command);
 			await vscode.commands.executeCommand(insert.command.command, ...insert.command.arguments!);
-			assert.equal(editor.selection.active.line, 2);
+			assert.equal(editor.selection.active.line, 0);
 			const character = editor.selection.active.character;
-			assert.equal(document.lineAt(2).text.slice(character, character + 1), '|');
+			assert.equal(document.lineAt(0).text.slice(character, character + 1), ' ');
+			await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
+			assert.equal(editor.selection.active.line, 2);
 			await vscode.commands.executeCommand('lapis.table.deleteColumn');
 			assert.match(document.lineAt(2).text, /apple\s*\|\s*2/);
 			await vscode.commands.executeCommand('lapis.table.insertRowBelow');
@@ -184,6 +186,112 @@ suite('Lapis Extension Host', () => {
 			}
 		} finally {
 			await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+		}
+	});
+
+	test('inserts compact rows with native snippet navigation without reformatting other lines', async () => {
+		const source = 'Before\n\n| Long name | Qty |\n| :--- | ---: |\n| $value\\path | 2 |\n\nAfter\n';
+		for (const operation of ['insertRowAbove', 'insertRowBelow']) {
+			const document = await vscode.workspace.openTextDocument({ language: 'markdown', content: source });
+			const editor = await vscode.window.showTextDocument(document);
+			try {
+				editor.selection = new vscode.Selection(4, 18, 4, 18);
+				await vscode.commands.executeCommand(`lapis.table.${operation}`);
+				const row = operation === 'insertRowAbove' ? 4 : 5;
+				const expected = source.split('\n');
+				expected.splice(row, 0, '|  |  |');
+				assert.equal(document.getText(), expected.join('\n'));
+				assert.equal(editor.selection.active.line, row);
+				assert.equal(editor.selection.active.character, 2);
+				assert.ok(editor.selection.isEmpty);
+				await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
+				assert.equal(editor.selection.active.character, 5);
+				await vscode.commands.executeCommand('jumpToPrevSnippetPlaceholder');
+				assert.equal(editor.selection.active.character, 2);
+				await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
+				await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
+				assert.equal(editor.selection.active.character, 7);
+				assert.equal(document.getText(), expected.join('\n'));
+				await observeText(document, source, () => vscode.commands.executeCommand('undo'));
+				await observeText(document, expected.join('\n'), () => vscode.commands.executeCommand('redo'));
+			} finally {
+				await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+			}
+		}
+	});
+
+	test('fills compact row snippet cells without mirroring values into other cells', async () => {
+		const document = await vscode.workspace.openTextDocument({ language: 'markdown', content: '| A | B |\n| --- | --- |' });
+		const editor = await vscode.window.showTextDocument(document);
+		try {
+			editor.selection = new vscode.Selection(0, 5, 0, 5);
+			await vscode.commands.executeCommand('lapis.table.insertRowBelow');
+			assert.equal(document.lineAt(2).text, '|  |  |');
+			await vscode.commands.executeCommand('type', { text: 'first' });
+			await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
+			await vscode.commands.executeCommand('type', { text: 'second' });
+			assert.equal(document.lineAt(2).text, '| first | second |');
+			await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
+			assert.equal(editor.selection.active.character, '| first | second |'.length);
+		} finally {
+			await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+		}
+	});
+
+	test('inserts compact columns with vertical snippet navigation and one-step undo', async () => {
+		const source = 'Before\n\n| Long name | Qty |\n| :--- | ---: |\n| $value\\path | 2 |\n| pear | 10 |\n\nAfter\n';
+		for (const operation of ['insertColumnLeft', 'insertColumnRight']) {
+			const document = await vscode.workspace.openTextDocument({ language: 'markdown', content: source });
+			const editor = await vscode.window.showTextDocument(document);
+			try {
+				editor.selection = new vscode.Selection(4, 4, 4, 4);
+				await vscode.commands.executeCommand(`lapis.table.${operation}`);
+				const expected = operation === 'insertColumnLeft'
+					? 'Before\n\n|  | Long name | Qty |\n| --- | :--- | ---: |\n|  | $value\\path | 2 |\n|  | pear | 10 |\n\nAfter\n'
+					: 'Before\n\n| Long name |  | Qty |\n| :--- | --- | ---: |\n| $value\\path |  | 2 |\n| pear |  | 10 |\n\nAfter\n';
+				assert.equal(document.getText(), expected);
+				assert.equal(editor.selection.active.line, 2);
+				assert.equal(editor.selection.active.character, operation === 'insertColumnLeft' ? 2 : 14);
+				assert.ok(editor.selection.isEmpty);
+				await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
+				assert.equal(editor.selection.active.line, 4);
+				assert.equal(editor.selection.active.character, operation === 'insertColumnLeft' ? 2 : 16);
+				await vscode.commands.executeCommand('jumpToPrevSnippetPlaceholder');
+				assert.equal(editor.selection.active.line, 2);
+				await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
+				await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
+				assert.equal(editor.selection.active.line, 5);
+				assert.equal(editor.selection.active.character, operation === 'insertColumnLeft' ? 2 : 9);
+				await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
+				assert.equal(editor.selection.active.character, document.lineAt(5).text.length);
+				await observeText(document, source, () => vscode.commands.executeCommand('undo'));
+				await observeText(document, expected, () => vscode.commands.executeCommand('redo'));
+			} finally {
+				await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+			}
+		}
+	});
+
+	test('fills new column cells independently, skipping the separator', async () => {
+		for (const content of ['| A |\n| --- |\n| x |', '| A |\n| --- |']) {
+			const document = await vscode.workspace.openTextDocument({ language: 'markdown', content });
+			const editor = await vscode.window.showTextDocument(document);
+			try {
+				await vscode.commands.executeCommand('lapis.table.insertColumnRight');
+				await vscode.commands.executeCommand('type', { text: 'Header' });
+				assert.equal(document.lineAt(0).text, '| A | Header |');
+				await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
+				if (document.lineCount > 2) {
+					assert.equal(editor.selection.active.line, 2);
+					await vscode.commands.executeCommand('type', { text: 'Value' });
+					assert.equal(document.lineAt(2).text, '| x | Value |');
+					await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
+				}
+				assert.equal(document.lineAt(1).text, '| --- | --- |');
+				assert.equal(editor.selection.active.character, document.lineAt(editor.selection.active.line).text.length);
+			} finally {
+				await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
+			}
 		}
 	});
 

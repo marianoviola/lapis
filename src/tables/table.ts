@@ -16,6 +16,7 @@ interface Cell {
 export interface Table {
 	startLine: number;
 	endLine: number;
+	lines: string[];
 	rows: string[][];
 	prefixes: string[];
 	cells: Cell[][];
@@ -26,6 +27,7 @@ export interface TableEdit {
 	text: string;
 	row: number;
 	column: number;
+	tabStops?: { row: number; column: number }[];
 }
 
 const markdown = new MarkdownIt();
@@ -80,7 +82,7 @@ export function findTables(text: string): Table[] {
 			cell.text.startsWith(':') ? (cell.text.endsWith(':') ? 'center' : 'left')
 				: cell.text.endsWith(':') ? 'right' : 'default');
 		tables.push({
-			startLine, endLine, alignments,
+			startLine, endLine, alignments, lines: lines.slice(startLine, endLine),
 			rows: parsed.map(row => row.cells.map(cell => cell.text)),
 			prefixes: parsed.map(row => row.prefix),
 			cells: parsed.map(row => row.cells),
@@ -101,6 +103,42 @@ export function editTable(table: Table, operation: TableOperation, row: number, 
 	const prefixes = [...table.prefixes];
 	const alignments = [...table.alignments];
 	const count = Math.max(...rows.map(cells => cells.length));
+	if (operation === 'insertRowAbove' || operation === 'insertRowBelow') {
+		row = Math.min(rows.length, Math.max(2, row + (operation === 'insertRowBelow' ? 1 : 0)));
+		const prefix = prefixes[1];
+		const line = prefix + '|' + '  |'.repeat(count);
+		const lines = [...table.lines];
+		lines.splice(row, 0, line);
+		const tabStops = Array.from({ length: count }, (_, index) => ({ row, column: prefix.length + 2 + index * 3 }));
+		return { text: lines.join(eol), row, column: tabStops[0].column, tabStops };
+	}
+	if (operation === 'insertColumnLeft' || operation === 'insertColumnRight') {
+		column += operation === 'insertColumnRight' ? 1 : 0;
+		const tabStops: NonNullable<TableEdit['tabStops']> = [];
+		const lines = table.lines.map((source, r) => {
+			const separator = r === 1;
+			const value = separator ? ' --- ' : '  ';
+			const original = table.cells[r];
+			const last = original[original.length - 1];
+			// Complete ragged rows before inserting at the same logical column.
+			const missing = count - original.length;
+			const closing = missing > 0 && last.end === source.length ? '|' : '';
+			const spacing = missing > 0 && source[last.end - 1] === '\\' ? ' ' : '';
+			const line = source.slice(0, last.end) + spacing + ('|' + value).repeat(missing) + closing + source.slice(last.end);
+			const parsed = splitRow(line, r === 0);
+			const cells = parsed.cells;
+			const atEnd = column === count;
+			const offset = atEnd ? cells[cells.length - 1].end : cells[column].start;
+			const opening = !atEnd && column === 0 && offset === parsed.prefix.length ? '|' : '';
+			const boundary = atEnd && line[offset - 1] === '\\' ? ' |' : '|';
+			const inserted = atEnd ? boundary + value + (offset === line.length ? '|' : '') : opening + value + '|';
+			if (!separator) {
+				tabStops.push({ row: r, column: offset + (atEnd ? boundary.length + 1 : opening.length + 1) });
+			}
+			return line.slice(0, offset) + inserted + line.slice(offset);
+		});
+		return { text: lines.join(eol), row: 0, column: tabStops[0].column, tabStops };
+	}
 	for (const cells of rows) { while (cells.length < count) { cells.push(''); } }
 	while (alignments.length < count) { alignments.push('default'); }
 	if (operation === 'deleteRow') {
@@ -109,20 +147,11 @@ export function editTable(table: Table, operation: TableOperation, row: number, 
 		prefixes.splice(row, 1);
 		row = Math.max(0, Math.min(row, rows.length - 1));
 		if (row === 1) { row = 0; }
-	} else if (operation === 'insertRowAbove' || operation === 'insertRowBelow') {
-		row = Math.max(2, row + (operation === 'insertRowBelow' ? 1 : 0));
-		row = Math.min(row, rows.length);
-		rows.splice(row, 0, Array.from({ length: count }, () => ''));
-		prefixes.splice(row, 0, prefixes[1]);
 	} else if (operation === 'deleteColumn') {
 		if (count <= 1) { throw new Error('The last table column cannot be deleted.'); }
 		for (const cells of rows) { cells.splice(column, 1); }
 		alignments.splice(column, 1);
 		column = Math.min(column, count - 2);
-	} else if (operation === 'insertColumnLeft' || operation === 'insertColumnRight') {
-		column += operation === 'insertColumnRight' ? 1 : 0;
-		for (const cells of rows) { cells.splice(column, 0, ''); }
-		alignments.splice(column, 0, 'default');
 	} else if (operation !== 'format') {
 		alignments[column] = operation === 'alignLeft' ? 'left' : operation === 'alignCenter' ? 'center' : 'right';
 	}

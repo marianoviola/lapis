@@ -61,8 +61,32 @@ export function registerTableCommands(output: Pick<vscode.LogOutputChannel, 'err
 					? 'The table header and separator cannot be deleted.' : 'The last table column cannot be deleted.');
 				return;
 			}
-			const edit = editTable(table, operation, cell.row, cell.column, document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n');
+			const eol = document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n';
+			const edit = editTable(table, operation, cell.row, cell.column, eol);
 			const range = new vscode.Range(table.startLine, 0, table.endLine - 1, document.lineAt(table.endLine - 1).text.length);
+			if (edit.tabStops) {
+				const lines = edit.text.split(eol);
+				const snippet = new vscode.SnippetString();
+				const lineOffsets: number[] = [];
+				let offset = 0;
+				for (const line of lines) {
+					lineOffsets.push(offset);
+					offset += line.length + eol.length;
+				}
+				offset = 0;
+				edit.tabStops.forEach((stop, index) => {
+					const next = lineOffsets[stop.row] + stop.column;
+					snippet.appendText(edit.text.slice(offset, next)).appendTabstop(index + 1);
+					offset = next;
+				});
+				const last = edit.tabStops[edit.tabStops.length - 1];
+				const exit = lineOffsets[last.row] + lines[last.row].length;
+				snippet.appendText(edit.text.slice(offset, exit)).appendTabstop(0);
+				snippet.appendText(edit.text.slice(exit));
+				const applied = await editor.insertSnippet(snippet, range, { undoStopBefore: true, undoStopAfter: true });
+				if (!applied) { throw new Error('VS Code could not apply the table insertion.'); }
+				return;
+			}
 			if (document.getText(range) !== edit.text) {
 				const applied = await editor.edit(builder => builder.replace(range, edit.text), { undoStopBefore: true, undoStopAfter: true });
 				if (!applied) { throw new Error('VS Code could not apply the table edit.'); }
