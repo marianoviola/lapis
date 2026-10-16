@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- Read-only GFM task-list checkboxes in the native Markdown preview, including
+  nested and ordered lists and task labels containing wikilinks.
+
 ### Changed
 
 - Rename the extension back to Lapis: package `lapis`, commands and settings

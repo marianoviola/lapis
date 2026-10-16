@@ -55,6 +55,9 @@ Implemented:
 	in the index; diagnostics are unchanged. An unclosed preamble remains visible.
 - Inline code in the native preview uses 90% of the surrounding font size.
 	Code blocks and source-editor font settings are unchanged.
+- GFM task-list markers (`- [ ]`, `- [x]` and `- [X]`) render as read-only
+	checkboxes, including nested and ordered lists. Change their state in the
+	Markdown source; code examples and escaped markers remain ordinary text.
 - Preview wikilinks resolve through the same vault index, including heading
 	anchors and unsaved target headings. Missing links have a dotted underline;
 	ambiguous links have a dashed underline and list candidates in their tooltip.
