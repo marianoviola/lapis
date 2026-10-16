@@ -27,6 +27,16 @@ notes concurrently, and debounces per-note changes. Open buffers overlay disk
 content, while source filesystem timestamps remain filesystem metadata. Native
 rename tracking changes records but deliberately does not mutate link text.
 
+## Vaults
+
+`VaultService` discovers `.lapis` markers beneath workspace folders and along
+their ancestor paths, and watches marker lifecycle changes. `VaultRegistry`
+resolves the topmost marked ancestor as the link namespace and returns the
+marked ancestor chain nearest-first. `WorkspaceIndex` indexes Markdown only
+inside discovered vaults, applies folder and VS Code file exclusions, and
+rebuilds when vault membership changes. Workspace folders in one vault share a
+namespace; independent vaults remain isolated.
+
 ## Planned Boundaries
 
 - **Preview adapter:** export `extendMarkdownIt`; recognize tokens during parsing,
@@ -81,18 +91,3 @@ and a proven timeline library are deferred until their respective slices.
 
 No graph view, persistent index database, full formula language, background
 daemon, or replacement Markdown editor is planned.
-
-## Vault Registry (Implemented Foundation)
-
-`src/vault/vaults.ts` is a pure registry of directory URIs containing `.lapis`
-markers. The host supplies discovery results through atomic `replace()` calls.
-For a file, `resolve()` returns marked ancestor directories nearest first,
-the topmost marked directory as `rootUri`, and its relative file path.
-Independent roots and URI authorities retain separate link namespaces;
-workspace folder boundaries do not affect this calculation.
-
-The registry performs no filesystem access or configuration parsing. It is not
-yet connected to `WorkspaceIndex`: current workspace-wide indexing is unchanged.
-Discovery, marker watching and configuration diagnostics are the next adapter
-slice. Whether to discover markers above workspace folders and the configuration
-format remain open decisions. No configuration inheritance keys ship yet.

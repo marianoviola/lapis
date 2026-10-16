@@ -1,14 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- Add a pure vault registry with nested membership and independent namespaces;
-  filesystem discovery and index integration are pending.
-
-- Fix escaped-pipe wikilink aliases, including heading links and embeds.
-- Show Open Note immediately and stream indexed notes while scanning.
-- Include unit tests in TypeScript and ESLint checks.
-
 ## 0.0.1 - 2026-10-02
 
 ### Added
