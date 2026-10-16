@@ -6,6 +6,9 @@
 
 - Read-only GFM task-list checkboxes in the native Markdown preview, including
   nested and ordered lists and task labels containing wikilinks.
+- Theme-aware `==highlights==`, referenced footnotes and inline footnotes in
+  Markdown previews inside and outside vaults. Reuse parser support when
+  already available and preserve cached reference IDs when rendering wikilinks.
 
 ### Changed
 

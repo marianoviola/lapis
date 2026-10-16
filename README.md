@@ -59,6 +59,15 @@ Implemented:
 	checkboxes, including nested and ordered lists. Change their state in the
 	Markdown source; code examples and escaped markers remain ordinary text.
 	Checked boxes use the theme's link colour as their background.
+- Highlights (`==important text==`) and footnotes (`[^1]` with a
+	`[^1]: Footnote text` definition) render in any native Markdown preview,
+	including notes outside vaults. Inline footnotes (`^[Footnote text]`) are
+	also supported. Highlights use theme colours; code and escaped syntax are
+	left alone. Repeated references have distinct backlinks.
+	Lapis reuses highlight and footnote support already registered on the
+	Markdown parser, preserving existing footnote renderers. Extensions that
+	register plugins afterward or use different conventions are not covered
+	by this compatibility check.
 - Preview wikilinks resolve through the same vault index, including heading
 	anchors and unsaved target headings. Missing links have a dotted underline;
 	ambiguous links have a dashed underline and list candidates in their tooltip.
