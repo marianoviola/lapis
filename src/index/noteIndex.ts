@@ -179,7 +179,7 @@ export class NoteIndex {
 	}
 
 	private key(root: string, path: string): string {
-		return JSON.stringify([root, path.replace(/\.md$/i, '')]);
+		return JSON.stringify([root, path]);
 	}
 
 	private nextGeneration(uri: string): number {
@@ -191,11 +191,11 @@ export class NoteIndex {
 	private replace(note: NoteRecord): void {
 		this.removeIdentity(note.id);
 		this.records.set(note.id, note);
-		const path = this.key(note.rootUri, note.relativePath);
+		const path = this.key(note.rootUri, note.relativePath.replace(/\.md$/i, ''));
 		const matches = this.paths.get(path) ?? new Set<string>();
 		matches.add(note.id);
 		this.paths.set(path, matches);
-		const basename = this.key(note.rootUri, note.filename);
+		const basename = this.key(note.rootUri, note.filename.replace(/\.md$/i, ''));
 		const ids = this.basenames.get(basename) ?? new Set<string>();
 		ids.add(note.id);
 		this.basenames.set(basename, ids);
@@ -205,13 +205,13 @@ export class NoteIndex {
 	private removeIdentity(uri: string): void {
 		const note = this.records.get(uri);
 		if (note) {
-			const path = this.key(note.rootUri, note.relativePath);
+			const path = this.key(note.rootUri, note.relativePath.replace(/\.md$/i, ''));
 			const matches = this.paths.get(path);
 			matches?.delete(uri);
 			if (!matches?.size) {
 				this.paths.delete(path);
 			}
-			const basename = this.key(note.rootUri, note.filename);
+			const basename = this.key(note.rootUri, note.filename.replace(/\.md$/i, ''));
 			const ids = this.basenames.get(basename);
 			ids?.delete(uri);
 			if (!ids?.size) {

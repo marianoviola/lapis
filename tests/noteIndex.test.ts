@@ -79,6 +79,21 @@ describe('shared note index', () => {
 		expect(index.resolve('Note', `${root}/Source.md`).kind).toBe('ambiguous');
 		expect(index.resolve('Other', `${root}/Source.md`).kind).toBe('missing');
 	});
+	it('strips only one extension when resolving filenames with repeated .md suffixes', () => {
+		const index = new NoteIndex(async () => undefined);
+		const from = `${root}/projects/Source.md`;
+		index.upsert(source('projects/Source.md'));
+		index.upsert(source('archive/Double.md.md'));
+		for (const target of ['Double.md.md', '/archive/Double.md.md', '../archive/Double.md.md']) {
+			expect(index.resolve(target, from)).toMatchObject({
+				kind: 'resolved', note: { id: `${root}/archive/Double.md.md` },
+			});
+		}
+		expect(index.resolve('Double.md', from).kind).toBe('missing');
+		index.upsert(source('archive/Double.md.md', '# Updated'));
+		index.remove(`${root}/archive/Double.md.md`);
+		expect(index.resolve('Double.md.md', from).kind).toBe('missing');
+	});
 	it('reports colliding extension-case identities instead of choosing the last file', () => {
 		const index = new NoteIndex(async () => undefined);
 		index.upsert(source('Source.md'));
