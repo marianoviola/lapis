@@ -176,6 +176,35 @@ suite('Lapis Extension Host', () => {
 		}
 	});
 
+	test('renders read-only GFM checkboxes with wikilinks without changing source or cached tokens', async () => {
+		const uri = vscode.Uri.joinPath(root, 'Welcome.md');
+		const text = '- [ ] [[Welcome|Open]]\n- [X] **Done**\n  - [x] Nested\n- Ordinary\n';
+		const document = await vscode.workspace.openTextDocument(uri);
+		const original = document.getText();
+		const dirty = document.isDirty;
+		const html = await vscode.commands.executeCommand<string>('markdown.api.render', {
+			uri, version: document.version, getText: () => text,
+		});
+		assert.equal(html?.match(/type="checkbox"/g)?.length, 3);
+		assert.equal(html?.match(/disabled=""/g)?.length, 3);
+		assert.equal(html?.match(/checked=""/g)?.length, 2);
+		assert.ok(html?.includes('>Open</a>'), html);
+		assert.ok(html?.includes('<strong>Done</strong>'), html);
+		assert.ok(!html?.includes('[ ]') && !html?.includes('[X]'));
+		assert.equal(document.getText(), original);
+		assert.equal(document.isDirty, dirty);
+
+		const markdown = api.extendMarkdownIt(new MarkdownIt());
+		const tokens = markdown.parse(text, {});
+		const snapshot = JSON.stringify(tokens);
+		for (let render = 0; render < 2; render++) {
+			const result = markdown.renderer.render(tokens, markdown.options, { currentDocument: uri });
+			assert.equal(result.match(/type="checkbox"/g)?.length, 3);
+			assert.ok(result.includes('>Open</a>'));
+			assert.equal(JSON.stringify(tokens), snapshot);
+		}
+	});
+
 	test('preserves cached native tokens, automatic links and formatting when rendering wikilinks', () => {
 		const markdown = api.extendMarkdownIt(new MarkdownIt({ linkify: true, typographer: true }));
 		const text = '[[Welcome|Go]] https://example.com "quote" [reference][id]\n\n[id]: https://example.com/ref';

@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import MarkdownIt from 'markdown-it';
 import { NoteRecord } from '../domain/note';
 import { WorkspaceIndex } from '../index/workspaceIndex';
-import { previewFrontmatter } from '../markdown/preview';
+import { previewFrontmatter, previewTaskLists } from '../markdown/preview';
 import { previewWikilinks } from './wikilinks';
 
 // currentDocument and markdown.preview.refresh are version-tested native adapters.
@@ -50,6 +50,7 @@ export function nativePreview(workspace: WorkspaceIndex, output: vscode.LogOutpu
 		extendMarkdownIt(markdown) {
 			used = true;
 			previewFrontmatter(markdown);
+			previewTaskLists(markdown);
 			markdown.core.ruler.before('block', 'lapis_preview_buffers', () => workspace.synchronizeOpenDocuments());
 			const contexts = new WeakMap<object, object>();
 			markdown.core.ruler.before('inline', 'lapis_preview_context', state => {

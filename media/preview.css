@@ -2,6 +2,16 @@
 	font-size: 0.9em;
 }
 
+.lapis-task-list-item {
+	list-style-type: none;
+}
+
+.lapis-task-checkbox {
+	margin: 0 0.35em 0 -1.4em;
+	vertical-align: middle;
+	accent-color: var(--vscode-textLink-foreground);
+}
+
 .lapis-wikilink-missing {
 	color: var(--vscode-editorWarning-foreground);
 	text-decoration: underline dotted;
