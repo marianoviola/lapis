@@ -11,7 +11,7 @@ export class WorkspaceIndex implements vscode.Disposable {
 	private readonly subscriptions: vscode.Disposable[] = [];
 	private readonly watchers = new Map<string, vscode.FileSystemWatcher>();
 	private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
-	private readonly diagnostics = vscode.languages.createDiagnosticCollection('lapis');
+	private readonly diagnostics = vscode.languages.createDiagnosticCollection('lapislazuli');
 	private scan: Promise<void> = Promise.resolve();
 	private scanGeneration = 0;
 	private disposed = false;
@@ -61,7 +61,7 @@ export class WorkspaceIndex implements vscode.Disposable {
 				void this.rebuild();
 			}),
 			vscode.workspace.onDidChangeConfiguration(event => {
-				if (event.affectsConfiguration('lapis.excludedFolders')) {
+				if (event.affectsConfiguration('lapislazuli.excludedFolders')) {
 					void this.rebuild();
 				}
 			}),
@@ -142,7 +142,7 @@ export class WorkspaceIndex implements vscode.Disposable {
 	}
 
 	private excludedFolders(uri: vscode.Uri): string[] {
-		const value = vscode.workspace.getConfiguration('lapis', uri).get<unknown>('excludedFolders', defaultExcludedFolders);
+		const value = vscode.workspace.getConfiguration('lapislazuli', uri).get<unknown>('excludedFolders', defaultExcludedFolders);
 		return Array.isArray(value) ? value.filter((name): name is string => typeof name === 'string'
 			&& /^[A-Za-z0-9._-]+$/.test(name) && name !== '.' && name !== '..') : defaultExcludedFolders;
 	}
@@ -244,7 +244,7 @@ export class WorkspaceIndex implements vscode.Disposable {
 		}
 		this.diagnostics.set(uri, note.issues.map(issue => {
 			const diagnostic = new vscode.Diagnostic(new vscode.Range(issue.line, 0, issue.line, 1), issue.message, vscode.DiagnosticSeverity.Warning);
-			diagnostic.source = 'Lapis';
+			diagnostic.source = 'Lapislazuli';
 			return diagnostic;
 		}));
 	}

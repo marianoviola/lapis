@@ -6,7 +6,7 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Run Lapis",
+			"name": "Run Lapislazuli",
 			"type": "extensionHost",
 			"request": "launch",
 			"args": [
@@ -15,7 +15,7 @@
 			"outFiles": [
 				"${workspaceFolder}/dist/**/*.js"
 			],
-			"preLaunchTask": "Lapis: Compile"
+			"preLaunchTask": "Lapislazuli: Compile"
 		}
 	]
 }

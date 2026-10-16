@@ -1,6 +1,6 @@
 {
-  "name": "lapis",
-  "displayName": "Lapis",
+  "name": "lapislazuli",
+  "displayName": "Lapislazuli",
   "description": "Lightweight knowledge navigation and structured views for plain Markdown workspaces.",
   "version": "0.0.1",
   "packageManager": "pnpm@10.34.6",
@@ -20,20 +20,20 @@
   "contributes": {
     "commands": [
       {
-        "command": "lapis.openNote",
+        "command": "lapislazuli.openNote",
         "title": "Open Note",
-        "category": "Lapis"
+        "category": "Lapislazuli"
       },
       {
-        "command": "lapis.rebuildIndex",
+        "command": "lapislazuli.rebuildIndex",
         "title": "Rebuild Index",
-        "category": "Lapis"
+        "category": "Lapislazuli"
       }
     ],
     "configuration": {
-      "title": "Lapis",
+      "title": "Lapislazuli",
       "properties": {
-        "lapis.excludedFolders": {
+        "lapislazuli.excludedFolders": {
           "type": "array",
           "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
           "default": [".git", "node_modules", "dist", "out", ".vscode-test"],

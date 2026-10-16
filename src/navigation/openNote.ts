@@ -7,11 +7,11 @@ interface NoteItem extends vscode.QuickPickItem {
 
 export async function openNote(workspace: WorkspaceIndex): Promise<void> {
 	if (!vscode.workspace.workspaceFolders?.length) {
-		await vscode.window.showInformationMessage('Open a folder to browse notes with Lapis.');
+		await vscode.window.showInformationMessage('Open a folder to browse notes with Lapislazuli.');
 		return;
 	}
 	const picker = vscode.window.createQuickPick<NoteItem>();
-	picker.title = 'Lapis: Open Note';
+	picker.title = 'Lapislazuli: Open Note';
 	picker.placeholder = 'Find a note by title or path';
 	picker.matchOnDescription = true;
 	picker.matchOnDetail = true;
@@ -43,7 +43,7 @@ export async function openNote(workspace: WorkspaceIndex): Promise<void> {
 			if (item) {
 				picker.hide();
 				void vscode.window.showTextDocument(item.uri, { preview: false }).then(undefined, error => {
-					void vscode.window.showErrorMessage(`Lapis could not open this note: ${error instanceof Error ? error.message : String(error)}`);
+					void vscode.window.showErrorMessage(`Lapislazuli could not open this note: ${error instanceof Error ? error.message : String(error)}`);
 				});
 			}
 		}),
@@ -69,7 +69,7 @@ export async function openNote(workspace: WorkspaceIndex): Promise<void> {
 	}, error => {
 		if (!disposed) {
 			picker.busy = false;
-			void vscode.window.showErrorMessage(`Lapis could not finish indexing: ${error instanceof Error ? error.message : String(error)}`);
+			void vscode.window.showErrorMessage(`Lapislazuli could not finish indexing: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	});
 }

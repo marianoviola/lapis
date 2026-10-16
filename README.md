@@ -1,4 +1,4 @@
-# Lapis
+# Lapislazuli
 
 A personal VS Code extension for lightweight knowledge workspaces built from
 ordinary Markdown files and YAML frontmatter. VS Code remains the editor,
@@ -8,7 +8,7 @@ filesystem browser, search environment, and Markdown preview.
 
 Implemented:
 
-- **Lapis: Open Note** opens a native Quick Pick searchable by title, path, and
+- **Lapislazuli: Open Note** opens a native Quick Pick searchable by title, path, and
 	selected properties. It opens immediately and updates while indexing continues.
 	Selecting a note opens the native Markdown editor.
 - A shared in-memory index tracks Markdown files, typed frontmatter, headings,
@@ -16,12 +16,12 @@ Implemented:
 - File creation, modification, deletion, and native renames update the index.
 	Pending reads cannot overwrite newer changes or resurrect deleted records.
 - Invalid frontmatter appears in the Problems panel. Notes remain navigable.
-- **Lapis: Rebuild Index** provides explicit recovery after missed filesystem
-	events. The **Lapis** Output channel reports discovery and read failures.
+- **Lapislazuli: Rebuild Index** provides explicit recovery after missed filesystem
+	events. The **Lapislazuli** Output channel reports discovery and read failures.
 - The data layer supports root-scoped link resolution and cached backlinks.
 	Neither is exposed as preview rendering or a backlinks sidebar yet.
 
-Lapis does not write or reformat your notes in this milestone. There is no
+Lapislazuli does not write or reformat your notes in this milestone. There is no
 database, hidden vault metadata, graph view, or proprietary note format.
 
 ## Try It
@@ -34,8 +34,8 @@ npx --yes pnpm@10 install
 npx --yes pnpm@10 run compile
 ```
 
-Press **F5** in this project to launch **Run Lapis** in an Extension Development
-Host. Open your Markdown folder in that window, then run **Lapis: Open Note**
+Press **F5** in this project to launch **Run Lapislazuli** in an Extension Development
+Host. Open your Markdown folder in that window, then run **Lapislazuli: Open Note**
 from the Command Palette. F5's build task uses pnpm through npx.
 
 The index is read-only and can operate in Restricted Mode. Desktop/local
@@ -54,7 +54,7 @@ supported; remote behavior has not been certified.
 	without `.md` is used. File identity is its URI, not its display title.
 - Editor buffers take precedence over disk content. Event updates are debounced
 	by 100 ms. Nothing is automatically saved.
-- `lapis.excludedFolders` lists directory names excluded at any depth. Defaults:
+- `lapislazuli.excludedFolders` lists directory names excluded at any depth. Defaults:
 	`.git`, `node_modules`, `dist`, `out`, and `.vscode-test`. These exclusions are
 	independent of VS Code's Explorer and search exclusions. Recursive watcher
 	events may also be suppressed by `files.watcherExclude`; rebuild to recover.
@@ -90,7 +90,7 @@ VSCODE_EXECUTABLE='/Applications/Visual Studio Code.app/Contents/MacOS/Code' \
 ```
 
 `package` builds the production bundle; it does not publish an extension or
-create a VSIX. No telemetry or network service is used by Lapis at runtime.
+create a VSIX. No telemetry or network service is used by Lapislazuli at runtime.
 
 ## Next Slices
 

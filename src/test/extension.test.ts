@@ -1,17 +1,17 @@
 import * as assert from 'node:assert/strict';
 import * as vscode from 'vscode';
-import type { LapisApi } from '../extension';
+import type { LapislazuliApi } from '../extension';
 import type { NoteRecord } from '../domain/note';
 
-suite('Lapis Extension Host', () => {
-	let api: LapisApi;
+suite('Lapislazuli Extension Host', () => {
+	let api: LapislazuliApi;
 	let root: vscode.Uri;
 	const created = new Set<string>();
 
 	suiteSetup(async () => {
-		const extension = vscode.extensions.all.find(candidate => candidate.packageJSON.name === 'lapis');
-		assert.ok(extension, 'Lapis must be loaded in the test Extension Host');
-		api = await extension.activate() as LapisApi;
+		const extension = vscode.extensions.all.find(candidate => candidate.packageJSON.name === 'lapislazuli');
+		assert.ok(extension, 'Lapislazuli must be loaded in the test Extension Host');
+		api = await extension.activate() as LapislazuliApi;
 		root = vscode.workspace.workspaceFolders![0].uri;
 		await api.whenIdle();
 	});
@@ -56,7 +56,7 @@ suite('Lapis Extension Host', () => {
 		const welcome = vscode.Uri.joinPath(root, 'Welcome.md').toString();
 		const related = vscode.Uri.joinPath(root, 'Projects', 'Related.md').toString();
 		assert.equal(api.getNotes().length, 2);
-		assert.equal(api.getNote(welcome)?.title, 'Welcome to Lapis');
+		assert.equal(api.getNote(welcome)?.title, 'Welcome to Lapislazuli');
 		assert.equal(api.getNote(welcome)?.properties.due, '2026-10-20');
 		assert.equal(api.resolveLink('Welcome', related).kind, 'resolved');
 		assert.deepEqual(api.getBacklinks(welcome).map(note => note.id), [related]);
@@ -64,8 +64,8 @@ suite('Lapis Extension Host', () => {
 
 	test('registers native commands and can rebuild the index', async () => {
 		const commands = await vscode.commands.getCommands();
-		assert.ok(commands.includes('lapis.openNote'));
-		assert.equal(await vscode.commands.executeCommand('lapis.rebuildIndex'), 2);
+		assert.ok(commands.includes('lapislazuli.openNote'));
+		assert.equal(await vscode.commands.executeCommand('lapislazuli.rebuildIndex'), 2);
 	});
 
 	test('opens a selected Quick Pick note in the native Markdown editor', async () => {
@@ -83,7 +83,7 @@ suite('Lapis Extension Host', () => {
 				reject(new Error('Quick Pick did not open a native Markdown editor'));
 			}, 10000);
 		});
-		await vscode.commands.executeCommand('lapis.openNote');
+		await vscode.commands.executeCommand('lapislazuli.openNote');
 		await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem');
 		await opened;
 	});
@@ -108,12 +108,12 @@ suite('Lapis Extension Host', () => {
 		const uri = vscode.Uri.joinPath(root, 'Invalid.md');
 		created.add(uri.toString());
 		await observe(uri, note => Boolean(note?.issues.length), () => vscode.workspace.fs.writeFile(uri, Buffer.from('---\nstatus: [\n---\nBody\n')));
-		assert.ok(vscode.languages.getDiagnostics(uri).some(diagnostic => diagnostic.source === 'Lapis'));
+		assert.ok(vscode.languages.getDiagnostics(uri).some(diagnostic => diagnostic.source === 'Lapislazuli'));
 		const document = await vscode.workspace.openTextDocument(uri);
 		const edit = new vscode.WorkspaceEdit();
 		edit.replace(uri, new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)), '---\nstatus: done\n---\nBody\n');
 		await observe(uri, note => note?.properties.status === 'done', () => vscode.workspace.applyEdit(edit));
-		assert.equal(vscode.languages.getDiagnostics(uri).filter(diagnostic => diagnostic.source === 'Lapis').length, 0);
+		assert.equal(vscode.languages.getDiagnostics(uri).filter(diagnostic => diagnostic.source === 'Lapislazuli').length, 0);
 		await document.save();
 	});
 

@@ -10,7 +10,7 @@
 
 ### Added
 
-- Lapis extension scaffold with pnpm, esbuild, and Extension Host debugging.
+- Lapislazuli extension scaffold with pnpm, esbuild, and Extension Host debugging.
 - Read-only shared Markdown index with typed YAML properties, headings,
   wikilink extraction, root-scoped resolution, and cached backlinks.
 - Incremental filesystem/editor updates with stale-read protection.

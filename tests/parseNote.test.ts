@@ -37,7 +37,7 @@ describe('note parsing', () => {
 | --- |
 | [[Other#Heading\|Alias]] |`;
 		const tokens = markdown.parse(table, {});
-		const link = tokens.flatMap(token => token.children ?? []).find(token => token.type === 'lapis_wikilink');
+		const link = tokens.flatMap(token => token.children ?? []).find(token => token.type === 'lapislazuli_wikilink');
 		expect(link?.meta).toMatchObject({ target: 'Other', heading: 'Heading', label: 'Alias' });
 		expect(markdown.render(table)).toContain('[[Other#Heading|Alias]]');
 		expect(markdown.render(String.raw`[[Other\|Alias]]`)).toContain(String.raw`[[Other\|Alias]]`);

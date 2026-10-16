@@ -2,7 +2,7 @@ import MarkdownIt from 'markdown-it';
 import { NoteLink } from '../domain/note';
 
 export function wikilinks(markdown: MarkdownIt): void {
-	markdown.inline.ruler.before('link', 'lapis_wikilink', (state, silent) => {
+	markdown.inline.ruler.before('link', 'lapislazuli_wikilink', (state, silent) => {
 		if ('linkLevel' in state && typeof state.linkLevel === 'number' && state.linkLevel > 0) {
 			return false;
 		}
@@ -21,7 +21,7 @@ export function wikilinks(markdown: MarkdownIt): void {
 			return false;
 		}
 		if (!silent) {
-			const token = state.push('lapis_wikilink', '', 0);
+			const token = state.push('lapislazuli_wikilink', '', 0);
 			token.content = match[0];
 			token.meta = {
 				target, heading, embed: match[1] === '!',
@@ -31,5 +31,5 @@ export function wikilinks(markdown: MarkdownIt): void {
 		state.pos += match[0].length;
 		return true;
 	});
-	markdown.renderer.rules.lapis_wikilink = (tokens, position) => markdown.utils.escapeHtml(tokens[position].content);
+	markdown.renderer.rules.lapislazuli_wikilink = (tokens, position) => markdown.utils.escapeHtml(tokens[position].content);
 }

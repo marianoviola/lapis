@@ -4,7 +4,7 @@ import { Resolution } from './index/noteIndex';
 import { WorkspaceIndex } from './index/workspaceIndex';
 import { openNote } from './navigation/openNote';
 
-export interface LapisApi {
+export interface LapislazuliApi {
 	onDidChange(listener: (uri: string) => void): vscode.Disposable;
 	getNotes(): readonly NoteRecord[];
 	getNote(uri: string): NoteRecord | undefined;
@@ -13,14 +13,14 @@ export interface LapisApi {
 	whenIdle(): Promise<void>;
 }
 
-export function activate(context: vscode.ExtensionContext): LapisApi {
-	const output = vscode.window.createOutputChannel('Lapis', { log: true });
+export function activate(context: vscode.ExtensionContext): LapislazuliApi {
+	const output = vscode.window.createOutputChannel('Lapislazuli', { log: true });
 	const workspace = new WorkspaceIndex(output);
 	context.subscriptions.push(
 		output, workspace,
-		vscode.commands.registerCommand('lapis.openNote', () => openNote(workspace)),
-		vscode.commands.registerCommand('lapis.rebuildIndex', async () => {
-			await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'Lapis: Rebuilding note index' }, () => workspace.rebuild());
+		vscode.commands.registerCommand('lapislazuli.openNote', () => openNote(workspace)),
+		vscode.commands.registerCommand('lapislazuli.rebuildIndex', async () => {
+			await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'Lapislazuli: Rebuilding note index' }, () => workspace.rebuild());
 			return workspace.notes.size;
 		}),
 	);

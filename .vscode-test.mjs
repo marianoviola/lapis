@@ -3,10 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const vault = mkdtempSync(join(tmpdir(), 'lapis-tests-'));
+const vault = mkdtempSync(join(tmpdir(), 'lapislazuli-tests-'));
 mkdirSync(join(vault, 'Projects'));
 mkdirSync(join(vault, 'node_modules'));
-writeFileSync(join(vault, 'Welcome.md'), '---\ntitle: Welcome to Lapis\nstatus: todo\ndue: 2026-10-20\n---\n# Welcome\n');
+writeFileSync(join(vault, 'Welcome.md'), '---\ntitle: Welcome to Lapislazuli\nstatus: todo\ndue: 2026-10-20\n---\n# Welcome\n');
 writeFileSync(join(vault, 'Projects', 'Related.md'), '[[Welcome]]\n`[[Ignored]]`\n');
 writeFileSync(join(vault, 'node_modules', 'Ignored.md'), '# Not a vault note\n');
 process.on('exit', () => rmSync(vault, { recursive: true, force: true }));
