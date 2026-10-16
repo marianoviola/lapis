@@ -10,7 +10,7 @@ the vault, and no webview may parse or write Markdown.
 | --- | --- |
 | `src/domain` | Portable record, property, heading, link, and issue types. |
 | `src/metadata` | Read frontmatter without changing source text. |
-| `src/markdown` | Shared wikilink tokenization grammar. |
+| `src/markdown` | Shared wikilink tokenization and native preview frontmatter adapter. |
 | `src/index` | Pure note parser/index plus a VS Code event/filesystem adapter. |
 | `src/navigation` | Native Quick Pick over shared records. |
 | `src/language` | Native document links, definitions and ambiguity hovers. |
@@ -36,6 +36,12 @@ Language providers use the shared index and synchronize open document versions
 before serving requests. Document link targets resolve lazily when first
 followed, using the current target headings rather than a parsing-time URI.
 
+The exported `extendMarkdownIt` hook hides closed frontmatter in the native
+preview by replacing its preamble with blank lines before block parsing. This
+preserves source line maps, leaves documents untouched and does not suppress
+index diagnostics. This presentation rule applies to native Markdown previews,
+including documents outside indexed vaults.
+
 ## Vaults
 
 `VaultService` discovers `.lapis` markers beneath workspace folders and along
@@ -48,7 +54,7 @@ namespace; independent vaults remain isolated.
 
 ## Planned Boundaries
 
-- **Preview adapter:** export `extendMarkdownIt`; recognize tokens during parsing,
+- **Preview wikilinks:** extend the existing `extendMarkdownIt` hook; recognize tokens during parsing,
   resolve from the index during rendering. Keep undocumented preview environment
   fields and refresh commands isolated behind a version-tested adapter.
 - **Additional language providers:** completion and later references share the

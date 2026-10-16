@@ -23,6 +23,7 @@
   },
   "main": "./dist/extension.js",
   "contributes": {
+    "markdown.markdownItPlugins": true,
     "commands": [
       {
         "command": "lapislazuli.openNote",

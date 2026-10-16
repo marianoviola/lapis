@@ -35,6 +35,9 @@ Implemented:
 - Wikilinks support **Cmd/Ctrl+click** and **F12** in the Markdown source editor,
 	including heading destinations and unsaved buffers. Ambiguous links show a
 	hover listing candidates instead of guessing a destination.
+- The native Markdown preview hides a closed YAML frontmatter preamble, even
+	when the YAML is invalid. Metadata stays editable in the source and available
+	in the index; diagnostics are unchanged. An unclosed preamble remains visible.
 
 Lapislazuli does not write or reformat your notes in this milestone. There is no
 database, hidden vault metadata, graph view, or proprietary note format.
@@ -105,8 +108,8 @@ npx --yes pnpm@10 run package
 Unit tests cover parsing, link resolution, backlinks, and index races.
 Integration tests launch a separate Extension Host against a temporary vault;
 they cover marker discovery and lifecycle, multi-root namespace sharing and
-isolation, index exclusions, and native wikilink navigation. The runner removes
-its fixture on exit and
+isolation, index exclusions, native wikilink navigation and preview metadata
+hiding. The runner removes its fixture on exit and
 uses an isolated VS Code profile.
 By default it downloads VS Code 1.140.0. To use an existing installation:
 

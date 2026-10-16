@@ -1,12 +1,15 @@
 import * as vscode from 'vscode';
+import MarkdownIt from 'markdown-it';
 import { NoteRecord } from './domain/note';
 import { Resolution } from './index/noteIndex';
 import { WorkspaceIndex } from './index/workspaceIndex';
 import { openNote } from './navigation/openNote';
 import { VaultService } from './vault/vaultService';
 import { registerWikilinkNavigation } from './language/links';
+import { previewFrontmatter } from './markdown/preview';
 
 export interface LapislazuliApi {
+	extendMarkdownIt(markdown: MarkdownIt): MarkdownIt;
 	onDidChange(listener: (uri: string) => void): vscode.Disposable;
 	getNotes(): readonly NoteRecord[];
 	getNote(uri: string): NoteRecord | undefined;
@@ -29,6 +32,7 @@ export function activate(context: vscode.ExtensionContext): LapislazuliApi {
 		}),
 	);
 	return {
+		extendMarkdownIt: previewFrontmatter,
 		onDidChange: listener => workspace.notes.onDidChange(listener),
 		getNotes: () => workspace.notes.getNotes(),
 		getNote: uri => workspace.notes.get(uri),

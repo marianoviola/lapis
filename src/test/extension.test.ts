@@ -116,6 +116,18 @@ suite('Lapislazuli Extension Host', () => {
 		assert.equal(api.getNote(independentNote.toString())?.rootUri, independentFolder.toString());
 	});
 
+	test('hides metadata in the native Markdown preview without changing the document', async () => {
+		const uri = vscode.Uri.joinPath(root, 'Welcome.md');
+		const document = await vscode.workspace.openTextDocument(uri);
+		const original = document.getText();
+		const html = await vscode.commands.executeCommand<string>('markdown.api.render', document);
+		assert.ok(html?.includes('Welcome'));
+		assert.ok(!html?.includes('status:') && !html?.includes('due:') && !html?.includes('title:'));
+		assert.ok(html?.includes('data-line="5"'), 'The native preview must retain source line mapping');
+		assert.equal(document.getText(), original);
+		assert.equal(document.isDirty, false);
+	});
+
 	test('navigates wikilinks with fresh unsaved source/target buffers and heading fallbacks', async () => {
 		const sourceUri = vscode.Uri.joinPath(root, 'Navigation source.md');
 		const targetUri = vscode.Uri.joinPath(root, 'Navigation target %.md');
