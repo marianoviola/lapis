@@ -1,10 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Rename the extension back to Lapis: package `lapis`, commands and settings
+  under `lapis.*`, and matching editor, preview and debug labels.
+- The `.lapis` vault marker is unchanged. Uninstall any older Lapislazuli VSIX
+  before installing Lapis and move customized settings/keybindings to `lapis.*`.
+
 ## 0.0.1 - 2026-10-02
 
 ### Added
 
-- Lapislazuli extension scaffold with pnpm, esbuild, and Extension Host debugging.
+- Lapis extension scaffold with pnpm, esbuild, and Extension Host debugging.
 - Read-only shared Markdown index with typed YAML properties, headings,
   wikilink extraction, root-scoped resolution, and cached backlinks.
 - Incremental filesystem/editor updates with stale-read protection.

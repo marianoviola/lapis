@@ -1,4 +1,4 @@
-# Lapislazuli
+# Lapis
 
 A personal VS Code extension for lightweight knowledge workspaces built from
 ordinary Markdown files and YAML frontmatter. VS Code remains the editor,
@@ -6,7 +6,7 @@ filesystem browser, search environment, and Markdown preview.
 
 ## Vaults
 
-A vault is a directory containing a `.lapis` marker file. Lapislazuli indexes
+A vault is a directory containing a `.lapis` marker file. Lapis indexes
 Markdown files only inside vaults; a marker may be in a workspace folder, a
 descendant, or an ancestor of a workspace folder. The extension checks ancestor
 directories as well as markers beneath each workspace folder.
@@ -20,15 +20,15 @@ multi-root workspace. Creating or removing a marker updates the index.
 
 Implemented:
 
-- **Lapislazuli: Open Note** opens a native Quick Pick searchable by title, path, and
+- **Lapis: Open Note** opens a native Quick Pick searchable by title, path, and
 	selected properties. Selecting a note opens the native Markdown editor.
 - A shared in-memory index tracks Markdown files, typed frontmatter, headings,
 	body wikilinks, file timestamps, and unsaved editor changes.
 - File creation, modification, deletion, and native renames update the index.
 	Pending reads cannot overwrite newer changes or resurrect deleted records.
 - Invalid frontmatter appears in the Problems panel. Notes remain navigable.
-- **Lapislazuli: Rebuild Index** provides explicit recovery after missed
-	filesystem events. The **Lapislazuli** Output channel reports discovery and
+- **Lapis: Rebuild Index** provides explicit recovery after missed
+	filesystem events. The **Lapis** Output channel reports discovery and
 	read failures.
 - The data layer supports root-scoped link resolution and cached backlinks.
 	Backlinks are not exposed as a sidebar yet.
@@ -60,7 +60,7 @@ Implemented:
 	ambiguous links have a dashed underline and list candidates in their tooltip.
 	Colours follow the VS Code theme. Target changes refresh open previews.
 
-Lapislazuli does not write or reformat your notes in this milestone. There is no
+Lapis does not write or reformat your notes in this milestone. There is no
 database, hidden vault metadata, graph view, or proprietary note format.
 
 ## Try It
@@ -73,9 +73,9 @@ npx --yes pnpm@10 install
 npx --yes pnpm@10 run compile
 ```
 
-Press **F5** in this project to launch **Run Lapislazuli** in an Extension
+Press **F5** in this project to launch **Run Lapis** in an Extension
 Development Host. Open a folder containing or inside a `.lapis` vault in that
-window, then run **Lapislazuli: Open Note** from the Command Palette. F5's build
+window, then run **Lapis: Open Note** from the Command Palette. F5's build
 task uses pnpm through npx.
 
 The index is read-only and can operate in Restricted Mode. Desktop/local
@@ -94,7 +94,7 @@ supported; remote behavior has not been certified.
 	without `.md` is used. File identity is its URI, not its display title.
 - Editor buffers take precedence over disk content. Event updates are debounced
 	by 100 ms. Nothing is automatically saved.
-- `lapislazuli.excludedFolders` lists directory names excluded at any depth.
+- `lapis.excludedFolders` lists directory names excluded at any depth.
 	Defaults: `.git`, `node_modules`, `dist`, `out`, and `.vscode-test`. Entries
 	in this setting and enabled `files.exclude` patterns are both respected.
 	Recursive watcher events may also be suppressed by `files.watcherExclude`;
@@ -148,7 +148,7 @@ VSCODE_EXECUTABLE='/Applications/Visual Studio Code.app/Contents/MacOS/Code' \
 ```
 
 `package` builds the production bundle; it does not publish an extension or
-create a VSIX. No telemetry or network service is used by Lapislazuli at
+create a VSIX. No telemetry or network service is used by Lapis at
 runtime.
 
 ## Next Slices
@@ -159,6 +159,14 @@ Bases/Table, Kanban, Timeline, reminders, and bounded note embedding.
 
 ## Install In An Existing VS Code Window
 
+If you previously installed the Lapislazuli VSIX, uninstall that extension
+before installing Lapis to avoid running both copies. The extension identifier
+has changed: commands now use `lapis.*`, and the folder exclusion setting is
+`lapis.excludedFolders`. Move any customized value from
+`lapislazuli.excludedFolders` to the new setting and update custom keybindings
+that reference the old commands. No automatic settings migration is performed.
+Vault markers remain `.lapis`; notes and vault directories need no changes.
+
 Create a local VSIX (the prepublish step builds and checks the extension):
 
 ```sh
@@ -168,5 +176,5 @@ npx --yes @vscode/vsce package --no-dependencies --skip-license
 Dependencies are bundled in `dist/extension.js`. `--skip-license` permits
 local packaging while the project has no license file; it does not grant a
 license. In VS Code, use Extensions → … → Install from VSIX and select
-`lapislazuli-0.0.1.vsix`. Reload the window if prompted. Rebuild and reinstall
+`lapis-0.0.1.vsix`. Reload the window if prompted. Rebuild and reinstall
 the VSIX after source changes.

@@ -1,4 +1,4 @@
-# Lapislazuli Architecture
+# Lapis Architecture
 
 ## Ownership
 
