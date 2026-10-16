@@ -98,3 +98,17 @@ See [the architecture and implementation sequence](docs/architecture.md).
 Next is native Markdown preview wikilinks and editor completion/definitions,
 followed by backlinks UI and practical rename safety, frontmatter mutations,
 Bases/Table, Kanban, Timeline, reminders, and bounded note embedding.
+
+## Install In An Existing VS Code Window
+
+Create a local VSIX (the prepublish step builds and checks the extension):
+
+```sh
+npx --yes @vscode/vsce package --no-dependencies --skip-license
+```
+
+Dependencies are bundled in `dist/extension.js`. `--skip-license` permits local
+packaging while the project has no license file; it does not grant a license.
+In VS Code, use Extensions → … → Install from VSIX and select
+`lapislazuli-0.0.1.vsix`. Reload the window if prompted. Rebuild and reinstall
+the VSIX after source changes.
