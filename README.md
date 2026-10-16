@@ -58,6 +58,7 @@ Implemented:
 - GFM task-list markers (`- [ ]`, `- [x]` and `- [X]`) render as read-only
 	checkboxes, including nested and ordered lists. Change their state in the
 	Markdown source; code examples and escaped markers remain ordinary text.
+	Checked boxes use the theme's link colour as their background.
 - Preview wikilinks resolve through the same vault index, including heading
 	anchors and unsaved target headings. Missing links have a dotted underline;
 	ambiguous links have a dashed underline and list candidates in their tooltip.
