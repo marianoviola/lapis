@@ -4,6 +4,12 @@ A personal VS Code extension for lightweight knowledge workspaces built from
 ordinary Markdown files and YAML frontmatter. VS Code remains the editor,
 filesystem browser, search environment, and Markdown preview.
 
+Lapis defines its own workflows and documented view syntax. Notes remain plain
+Markdown with YAML properties; using them does not require Obsidian or another
+note application. Data portability is a design goal, not a promise of feature
+or file-format parity with other tools. See [Portability and compatibility](docs/compatibility.md)
+for the current boundaries and criteria for future integrations.
+
 ## Vaults
 
 A vault is a directory containing a `.lapis` marker file. Lapis indexes
@@ -65,7 +71,7 @@ Implemented:
 	in the index; diagnostics are unchanged. An unclosed preamble remains visible.
 - Inline code in the native preview uses 90% of the surrounding font size.
 	Code blocks and source-editor font settings are unchanged.
-- Ordinary blockquotes in the preview use an Obsidian-inspired style: a slim
+- Ordinary blockquotes in the preview use a slim
 	link-coloured bar, a subtle tinted background and compact spacing. Text keeps
 	the surrounding colour; high-contrast themes omit the tint. Nested quotes,
 	lists and code retain their Markdown structure. This does not add callout syntax.
@@ -91,13 +97,30 @@ Implemented:
 
 Lapis never automatically rewrites or saves notes. Explicit authoring commands
 edit the active buffer only. There is no database, hidden vault metadata, graph
-view, or proprietary note format.
+view, or application-specific note container. Optional `.base` files are
+plain-text view definitions using the [documented Lapis syntax](docs/bases.md).
 
 ## Content Authoring
 
 Commands are the primary authoring interface for Lapis: tables and wikilinks now,
 and callouts in a future slice. Completion is an optional aid, not the main
 workflow. Changes are explicit, undoable and never automatically saved.
+
+### `.base` Views
+
+In Lapis, a Base is a saved view over note properties, not a separate database.
+Create a YAML `.base` file inside a vault to define read-only table and Kanban
+views over its Markdown notes. Run **Lapis: Open Base Preview** from the Command
+Palette or use the file's editor-title preview button or Explorer context menu.
+Switch between Source and Preview using VS Code's editor-title toolbar in the
+same editor group. The preview includes
+view tabs, search, layout/grouping toggles and property visibility controls.
+Use a note's bell to schedule a persistent date reminder through VS Code
+notifications, or **Lapis: Manage Note Reminders** to open or cancel alerts.
+Reminders survive restarts in the same workspace; overdue alerts appear on the
+next launch, not while VS Code is closed. See
+[Creating `.base` views](docs/bases.md) for the supported YAML syntax, filters,
+ordering, grouping, reminders, and examples.
 
 ### Markdown Tables
 
@@ -224,7 +247,7 @@ runtime.
 
 See [the architecture and implementation sequence](docs/architecture.md).
 Next are backlinks UI and practical rename safety, frontmatter mutations,
-Bases/Table, Kanban, Timeline, reminders, and bounded note embedding.
+editable Bases/Kanban, Timeline, and bounded note embedding.
 
 ## Install In An Existing VS Code Window
 
@@ -245,5 +268,5 @@ npx --yes @vscode/vsce package --no-dependencies --skip-license
 Dependencies are bundled in `dist/extension.js`. `--skip-license` permits
 local packaging while the project has no license file; it does not grant a
 license. In VS Code, use Extensions → … → Install from VSIX and select
-`lapis-0.0.1.vsix`. Reload the window if prompted. Rebuild and reinstall
+`lapis-0.1.0.vsix`. Reload the window if prompted. Rebuild and reinstall
 the VSIX after source changes.

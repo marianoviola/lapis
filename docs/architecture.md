@@ -3,8 +3,27 @@
 ## Ownership
 
 Markdown and YAML frontmatter are canonical. The extension owns only derived
-in-memory records and presentation state. No feature may independently scan
+in-memory records, presentation state and manually scheduled reminder state.
+No feature may independently scan
 the vault, and no webview may parse or write Markdown.
+
+## Portability, not product parity
+
+Lapis owns its documented semantics. Plain-text notes and view definitions
+support data portability, but do not imply another application's parsing,
+resolution or feature behavior. In particular, `.base` is the extension used
+for the documented Lapis view schema, not a general Obsidian compatibility
+contract.
+
+External compatibility must be scoped to a useful workflow, supported by fixtures
+and identified target versions, and preserve canonical source data. Unsupported
+syntax must remain explicit, not silently broaden a query or mutate a note.
+An optional boundary adapter is preferable to duplicating the index or coupling
+the core model to external application state. No such adapter is implemented.
+See [Portability and compatibility](compatibility.md) for the policy and current
+boundaries.
+
+## Modules
 
 | Module | Current responsibility |
 | --- | --- |
@@ -13,6 +32,7 @@ the vault, and no webview may parse or write Markdown.
 | `src/markdown` | Shared wikilink tokenization and native preview frontmatter adapter. |
 | `src/preview` | Resolver-backed wikilink rendering and native preview environment/refresh adapter. |
 | `src/index` | Pure note parser/index plus a VS Code event/filesystem adapter. |
+| `src/bases` | Pure `.base` parser, evaluator, table/board projections and HTML renderer; read-only custom text editor and persistent reminder scheduler/VS Code adapter. |
 | `src/navigation` | Native Quick Pick over shared records. |
 | `src/language` | Native document links, definitions, ambiguity hovers, dedicated wikilink insertion, optional completion and editor decorations. |
 | `src/tables` | Pure table edits plus explicit commands, Code Actions and context-menu integration. |
@@ -118,16 +138,36 @@ namespace; independent vaults remain isolated.
   revision, plan source-token/YAML-aware edits, and use `WorkspaceEdit`. Preserve
   body text and refuse malformed metadata. Never auto-save already-dirty notes.
 - **Bases:** parse YAML and evaluate a documented, allowlisted expression subset.
-  Global/view filters combine with AND. Queries return normalized records;
-  unsupported expressions produce diagnostics, never wider silent results.
-- **Views:** one React custom text editor for `.base`, initially opt-in. Table,
-  Kanban, and Timeline consume the same records and emit property mutations.
-  Versioned messages carry request IDs, record revisions, acknowledgments, and
-  failures. The host authorizes all file/property access.
-- **Dates/tasks:** normalize configured date properties without rewriting YAML.
-  Distinguish calendar dates from instants and define timezone/DST policies.
-  Schedule the next relevant event, reconcile on activation/focus/change, and
-  retain only notification deduplication state outside Markdown.
+  The parser accepts table/Kanban views, recursive YAML `and`/`or`/`not` filters,
+  scalar property comparisons, `order`, Kanban `groupBy`, and property display names. Filter
+  comparisons are limited to note properties and `file.name`, `file.path`,
+  `file.folder`, `file.ext`, `file.ctime`, and `file.mtime`; formula/`this`
+  namespaces, other view types, and unknown keys produce diagnostics. Global
+  and view filters combine with AND. Missing properties never match (including
+  `!=`); explicit `null` matches only `== null`; incompatible types do not
+  match, and relational comparisons are limited to numbers and strings.
+  Ordering is ascending, stable for ties, puts missing/null values last, and
+  sorts different value types by type then value. Queries consume `NoteRecord`s
+  supplied by the shared index; unsupported expressions produce diagnostics,
+  never wider silent results. The opt-in `lapis.baseTable` custom text editor
+  scopes records to the containing vault and refreshes on index/definition or
+  reminder changes. A pure HTML renderer serializes projections safely under a
+  nonce CSP; note content is inserted with DOM text APIs. View tabs, layout,
+  grouping, search and column controls retain session presentation state.
+  Host messages authorize note actions against the vault-scoped shared index.
+  Source/preview transitions share one text document in the same editor group;
+  `.base` remains associated with YAML. Neither layout writes to notes.
+- **Editable views (planned):** Table, Kanban, and Timeline will emit property
+  mutations through a revision-checked mutation service. Versioned messages
+  will carry request IDs, revisions, acknowledgments, and failures.
+- **Dates/reminders:** strict ISO calendar/instant parsing without rewriting
+  YAML. Date-only defaults to 09:00 local time; confirmation is local and the
+  persisted due time is an absolute instant. One manual alert per note lives
+  in workspaceState, with serialized writes before visible success or delivery.
+  Activation restores future and overdue reminders independently of previews.
+  Timers check at most one minute apart to handle long waits and resume/clock
+  jumps; file-operation events relocate or cancel reminders. Errors are logged
+  and shown. There is no background daemon or closed-VS-Code notification.
 
 Saving a `.base` definition does not save notes edited through its view. Likewise,
 custom-editor undo is not automatically a cross-document note undo mechanism.
@@ -143,15 +183,20 @@ Both workflows need explicit Extension Host tests before enabling editable views
    test ambiguity, folder moves, labels/headings, and external rename limitations.
 4. **Frontmatter mutations:** scalar editing with minimal source changes;
    test body/comments/CRLF preservation, stale revisions, undo, and save failures.
-5. **Bases/Table (first structured MVP):** supported query subset, sorting,
-   filtering, column resizing/order/visibility, note opening, and scalar editing.
-6. **Kanban:** scalar grouping, unassigned columns, keyboard alternatives, drag
-   mutation, and rejected-operation rollback.
+5. **Bases/Table (implemented, read-only):** pure YAML parser, diagnostics,
+   evaluator, and read-only table projection for the documented subset,
+   integrated with the shared index; test vault isolation, sorting/filtering,
+   column controls, diagnostics, and note opening. Scalar editing follows
+   through the mutation service.
+6. **Kanban (implemented, read-only):** typed grouping and unassigned columns,
+   view/layout controls and keyboard-accessible note actions. Drag mutation and
+   rejected-operation rollback follow the mutation service.
 7. **Timeline:** point/range projection, grouping, Today marker, zoom and
    Day/Week/Month/Quarter presets; then movement/resizing with atomic property
    edits and calendar/DST tests. No separate persisted timeline model.
-8. **Reminders:** startup overdue summary, next-event timer, recomputation,
-   reopen recovery, cancellation, and fake-clock tests.
+8. **Reminders (implemented, manual):** startup overdue notifications,
+   bounded next-event timers, persistent reopen recovery, change/cancellation,
+   file-operation tracking and fake-clock tests.
 9. **Embeds:** native-engine rendering of indexed content with cycle/depth/size
    limits and dependency refresh. Recursive live transclusion is not an MVP gate.
 

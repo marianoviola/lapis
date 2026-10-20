@@ -2,8 +2,23 @@
 
 ## Unreleased
 
+## 0.1.0 - 2026-10-20
+
 ### Added
 
+- Saved `.base` views with validated YAML filters, property display names,
+  stable ascending sorting, and vault-scoped queries over the shared index.
+- Read-only table and Kanban previews with view tabs, search, property
+  visibility, layout and grouping controls, and native Source/Preview actions
+  that preserve unsaved YAML in the same editor group.
+- Validated tag chips and one neutral chip per array element, with whole-chip
+  wrapping, bounded long values and full-value tooltips. Invalid tag metadata
+  remains visible without being interpreted as HTML or rewriting notes.
+- Manual date reminders through VS Code notifications, persisted per workspace,
+  with change/cancellation, startup overdue delivery and native file-operation
+  tracking. No closed-editor background delivery.
+- Lapis-first documentation and an explicit portability policy: selective,
+  tested external compatibility, without a general Obsidian parity guarantee.
 - Explicit Markdown table formatting, column alignment and row/column operations,
   available through commands, Code Actions and the editor context menu, inside
   and outside vaults. Preserve source content and edit only the target table
