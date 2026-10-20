@@ -3,7 +3,7 @@
   "displayName": "Lapis",
   "icon": "media/lapis-icon.png",
   "description": "Lightweight knowledge navigation and structured views for plain Markdown workspaces.",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/marianoviola/lapis.git"
@@ -15,7 +15,7 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": ["onLanguage:markdown", "workspaceContains:**/.lapis"],
+  "activationEvents": ["onLanguage:markdown", "workspaceContains:**/.lapis", "onStartupFinished"],
   "extensionKind": ["workspace"],
   "capabilities": {
     "untrustedWorkspaces": { "supported": true },
@@ -25,6 +25,20 @@
   "contributes": {
     "markdown.markdownItPlugins": true,
     "markdown.previewStyles": ["media/preview.css"],
+    "customEditors": [
+      {
+        "viewType": "lapis.baseTable",
+        "displayName": "Lapis Base Preview",
+        "selector": [{ "filenamePattern": "*.base" }],
+        "priority": "option"
+      }
+    ],
+    "languages": [
+      {
+        "id": "yaml",
+        "extensions": [".base"]
+      }
+    ],
     "commands": [
       {
         "command": "lapis.openNote",
@@ -34,6 +48,25 @@
       {
         "command": "lapis.rebuildIndex",
         "title": "Rebuild Index",
+        "category": "Lapis"
+      },
+      {
+        "command": "lapis.openBase",
+        "title": "Open Base Preview",
+        "category": "Lapis",
+        "icon": "$(open-preview)",
+        "enablement": "resourceExtname == .base"
+      },
+      {
+        "command": "lapis.openBaseSource",
+        "title": "Open Base Source",
+        "category": "Lapis",
+        "icon": "$(code)",
+        "enablement": "activeCustomEditorId == lapis.baseTable"
+      },
+      {
+        "command": "lapis.manageReminders",
+        "title": "Manage Note Reminders",
         "category": "Lapis"
       },
       {
@@ -104,6 +137,25 @@
       }
     ],
     "menus": {
+      "editor/title": [
+        {
+          "command": "lapis.openBase",
+          "when": "resourceExtname == .base && activeCustomEditorId != lapis.baseTable",
+          "group": "navigation"
+        },
+        {
+          "command": "lapis.openBaseSource",
+          "when": "activeCustomEditorId == lapis.baseTable",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "lapis.openBase",
+          "when": "resourceExtname == .base",
+          "group": "navigation"
+        }
+      ],
       "editor/context": [
         {
           "command": "lapis.insertWikilink",

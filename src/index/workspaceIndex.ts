@@ -129,6 +129,10 @@ export class WorkspaceIndex implements vscode.Disposable {
 		} while (scan !== this.scan || this.timers.size);
 	}
 
+	getVaultRoot(uri: vscode.Uri): string | undefined {
+		return this.vaults.registry.resolve(uri.toString())?.rootUri;
+	}
+
 	synchronizeOpenDocuments(): void {
 		for (const document of vscode.workspace.textDocuments) {
 			const id = document.uri.toString();

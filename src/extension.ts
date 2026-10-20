@@ -12,6 +12,8 @@ import { registerBlockquoteDecorations } from './language/blockquoteDecorations'
 import { nativePreview } from './preview/nativePreview';
 import { registerTableCommands } from './tables/commands';
 import { registerInsertWikilink } from './language/insertWikilink';
+import { BaseViewProvider } from './bases/provider';
+import { NoteReminderService } from './bases/reminderService';
 
 export interface LapisApi {
 	extendMarkdownIt(markdown: MarkdownIt): MarkdownIt;
@@ -27,15 +29,19 @@ export function activate(context: vscode.ExtensionContext): LapisApi {
 	const output = vscode.window.createOutputChannel('Lapis', { log: true });
 	const vaults = new VaultService(output);
 	const workspace = new WorkspaceIndex(output, vaults);
+	const reminders = new NoteReminderService(context, workspace, output);
+	const baseViews = new BaseViewProvider(workspace, output, reminders);
 	const preview = nativePreview(workspace, output);
 	context.subscriptions.push(
-		output, vaults, workspace, preview,
+		output, vaults, workspace, reminders, baseViews, preview,
 		registerWikilinkNavigation(workspace),
 		registerWikilinkCompletion(workspace),
 		registerWikilinkDecorations(workspace),
 		registerBlockquoteDecorations(output),
 		registerTableCommands(output),
 		registerInsertWikilink(workspace, output),
+		vscode.commands.registerCommand('lapis.openBase', (uri?: vscode.Uri) => baseViews.open(uri)),
+		vscode.commands.registerCommand('lapis.openBaseSource', (uri?: vscode.Uri) => baseViews.openSource(uri)),
 		vscode.commands.registerCommand('lapis.openNote', () => openNote(workspace)),
 		vscode.commands.registerCommand('lapis.rebuildIndex', async () => {
 			await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'Lapis: Rebuilding note index' }, () => workspace.rebuild());
