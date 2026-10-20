@@ -84,13 +84,71 @@ suite('Lapis Extension Host', () => {
 	test('registers native commands and can rebuild the index', async () => {
 		const commands = await vscode.commands.getCommands();
 		assert.ok(commands.includes('lapis.openNote'));
+		assert.ok(commands.includes('lapis.openBase'));
+		assert.ok(commands.includes('lapis.openBaseSource'));
+		assert.ok(commands.includes('lapis.manageReminders'));
 		assert.ok(commands.includes('lapis.rebuildIndex'));
 		assert.ok(!commands.includes('lapislazuli.openNote'));
 		assert.ok(!commands.includes('lapislazuli.rebuildIndex'));
 		const extension = vscode.extensions.all.find(candidate => candidate.packageJSON.name === 'lapis');
 		assert.equal(extension?.packageJSON.displayName, 'Lapis');
 		assert.equal(extension?.packageJSON.icon, 'media/lapis-icon.png');
+		const titleActions = extension?.packageJSON.contributes.menus['editor/title'];
+		assert.ok(titleActions.some((action: { command: string; when: string }) =>
+			action.command === 'lapis.openBaseSource' && action.when === 'activeCustomEditorId == lapis.baseTable'));
 		assert.equal(await vscode.commands.executeCommand('lapis.rebuildIndex'), 4);
+	});
+
+	test('switches from Base source to a same-group read-only custom preview over the vault-scoped index', async () => {
+		const base = vscode.Uri.joinPath(root, 'Notes.base');
+		const welcome = vscode.Uri.joinPath(root, 'Welcome.md');
+		created.add(base.toString());
+		await vscode.workspace.fs.writeFile(base, Buffer.from([
+			'views:',
+			'  - type: table',
+			'    name: Vault notes',
+			'  - type: kanban',
+			'    name: Board',
+			'    groupBy: status',
+			'properties:',
+			'  status:',
+			'    displayName: State',
+		].join('\n')));
+		const sourceDocument = await vscode.workspace.openTextDocument(base);
+		assert.equal(sourceDocument.languageId, 'yaml');
+		const sourceEditor = await vscode.window.showTextDocument(sourceDocument, { preview: false });
+		const sourceColumn = sourceEditor.viewColumn;
+		const sourceBytes = await vscode.workspace.fs.readFile(base);
+		const edit = new vscode.WorkspaceEdit();
+		const name = sourceDocument.getText().indexOf('Vault notes');
+		edit.replace(base, new vscode.Range(sourceDocument.positionAt(name), sourceDocument.positionAt(name + 'Vault notes'.length)), 'Unsaved vault view');
+		assert.ok(await vscode.workspace.applyEdit(edit));
+		assert.ok(sourceDocument.isDirty);
+		const before = await vscode.workspace.fs.readFile(welcome);
+		const panel = await vscode.commands.executeCommand<vscode.WebviewPanel | undefined>('lapis.openBase', base);
+		assert.ok(panel, 'Base table did not create a webview panel');
+		assert.equal(panel.viewType, 'lapis.baseTable');
+		assert.equal(panel.viewColumn, sourceColumn);
+		const baseTabs = vscode.window.tabGroups.all.flatMap(group => group.tabs).filter(tab =>
+			(tab.input instanceof vscode.TabInputText || tab.input instanceof vscode.TabInputCustom)
+			&& tab.input.uri.toString() === base.toString());
+		assert.equal(baseTabs.length, 1, 'Switching to preview should replace the source tab');
+		assert.ok(baseTabs[0].input instanceof vscode.TabInputCustom);
+		assert.doesNotMatch(panel.webview.html, /id="source"/);
+		assert.match(panel.webview.html, /id="search"/);
+		assert.match(panel.webview.html, /id="kanban"/);
+		assert.match(panel.webview.html, /Unsaved vault view/);
+		assert.match(panel.webview.html, /Welcome/);
+		assert.match(panel.webview.html, /Related/);
+		assert.match(panel.webview.html, /Shared/);
+		assert.doesNotMatch(panel.webview.html, /Private/);
+		assert.deepEqual(await vscode.workspace.fs.readFile(welcome), before);
+		assert.deepEqual(await vscode.workspace.fs.readFile(base), sourceBytes, 'Preview must not save unsaved YAML');
+		await vscode.commands.executeCommand('lapis.openBaseSource');
+		assert.match(vscode.window.activeTextEditor?.document.getText() ?? '', /Unsaved vault view/);
+		assert.equal(vscode.window.activeTextEditor?.viewColumn, sourceColumn);
+		assert.deepEqual(await vscode.workspace.fs.readFile(base), sourceBytes, 'Opening source must not save unsaved YAML');
+		assert.ok(await sourceDocument.save());
 	});
 
 	test('opens a selected Quick Pick note in the native Markdown editor', async () => {
