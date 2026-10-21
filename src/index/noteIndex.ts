@@ -122,6 +122,14 @@ export class NoteIndex {
 		if (!reference) {
 			return { kind: 'resolved', note: from };
 		}
+		if (!reference.includes('/') && reference !== '.' && reference !== '..') {
+			const matches = this.basenames.get(this.key(from.rootUri, reference));
+			if (matches?.size === 1) {
+				for (const uri of matches) {
+					return { kind: 'resolved', note: this.records.get(uri)! };
+				}
+			}
+		}
 		const absolute = reference.startsWith('/');
 		const relative = reference.startsWith('./') || reference.startsWith('../');
 		const possiblePaths = absolute ? [reference.slice(1)]

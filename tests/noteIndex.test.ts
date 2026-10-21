@@ -79,6 +79,23 @@ describe('shared note index', () => {
 		expect(index.resolve('Note', `${root}/Source.md`).kind).toBe('ambiguous');
 		expect(index.resolve('Other', `${root}/Source.md`).kind).toBe('missing');
 	});
+	it('preserves local precedence when unique basenames become duplicated', () => {
+		const index = new NoteIndex(async () => undefined);
+		const from = `${root}/projects/Source.md`;
+		index.upsert(source('projects/Source.md'));
+		index.upsert(source('archive/Target.md'));
+		expect(index.resolve('Target', from)).toMatchObject({
+			kind: 'resolved', note: { id: `${root}/archive/Target.md` },
+		});
+		index.upsert(source('projects/Target.md'));
+		expect(index.resolve('Target', from)).toMatchObject({
+			kind: 'resolved', note: { id: `${root}/projects/Target.md` },
+		});
+		index.remove(`${root}/projects/Target.md`);
+		expect(index.resolve('Target', from)).toMatchObject({
+			kind: 'resolved', note: { id: `${root}/archive/Target.md` },
+		});
+	});
 	it('strips only one extension when resolving filenames with repeated .md suffixes', () => {
 		const index = new NoteIndex(async () => undefined);
 		const from = `${root}/projects/Source.md`;

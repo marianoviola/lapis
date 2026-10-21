@@ -13,6 +13,8 @@
 
 - Avoid constructing longer wikilink candidates when a bare filename already
   resolves to the intended note, preserving ambiguity and shortest-target rules.
+- Resolve unique bare filenames directly through the vault-scoped basename
+  index without redundant path normalization.
 
 ## 0.1.0 - 2026-10-20
 
