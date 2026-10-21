@@ -4,12 +4,36 @@
 
 <h1 align="center">Lapis — Markdown Workspaces</h1>
 
+A lightweight knowledge workspace for VS Code, built from ordinary Markdown
+files and YAML frontmatter. Keep your notes in plain text while using VS Code's
+editor, Explorer, search, and Markdown preview.
+
+## Key Features
+
+- **Find notes quickly** — search by title, path, and selected properties with
+  **Lapis: Open Note**.
+- **Connect your knowledge** — insert wikilinks with a dedicated note and heading
+  picker, then navigate with **Cmd/Ctrl+click** or **F12**. Theme-aware link
+  styling distinguishes resolved, missing, and ambiguous targets.
+- **Organize notes into views** — use plain-text `.base` definitions to explore
+  note properties in read-only **table and Kanban views**, with search,
+  grouping, and property visibility controls.
+- **Set note reminders** — schedule date reminders from a Base preview and receive
+  VS Code notifications. Reminders persist across restarts in the same workspace;
+  alerts are delivered while VS Code is running or on the next launch.
+- **Edit Markdown tables** — format tables, align columns, and insert or delete
+  rows and columns with explicit, undoable commands.
+- **Read richer previews** — render wikilinks, highlights, footnotes, task-list
+  checkboxes, and theme-aware blockquotes in the native Markdown preview.
+- **Stay in control of your files** — notes remain ordinary Markdown, with no
+  application-specific database. Authoring commands edit only the active buffer
+  and never automatically save your notes.
+
+**Get started:** create a `.lapis` marker file in your notes folder, open that
+folder in VS Code, and run **Lapis: Open Note** from the Command Palette.
+
 Extension ID: `marianoviola.lapis`. Licensed under the
 [MIT License](LICENSE).
-
-A personal VS Code extension for lightweight knowledge workspaces built from
-ordinary Markdown files and YAML frontmatter. VS Code remains the editor,
-filesystem browser, search environment, and Markdown preview.
 
 Lapis defines its own workflows and documented view syntax. Notes remain plain
 Markdown with YAML properties; using them does not require Obsidian or another
