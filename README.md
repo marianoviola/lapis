@@ -1,4 +1,11 @@
-# Lapis
+<p align="center">
+  <img src="media/lapis-icon.png" alt="Lapis icon" width="160" height="160">
+</p>
+
+<h1 align="center">Lapis — Markdown Workspaces</h1>
+
+Extension ID: `marianoviola.lapis`. Licensed under the
+[MIT License](LICENSE).
 
 A personal VS Code extension for lightweight knowledge workspaces built from
 ordinary Markdown files and YAML frontmatter. VS Code remains the editor,
@@ -251,6 +258,8 @@ editable Bases/Kanban, Timeline, and bounded note embedding.
 
 ## Install In An Existing VS Code Window
 
+Install [Lapis — Markdown Workspaces from the VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=marianoviola.lapis).
+
 If you previously installed the Lapislazuli VSIX, uninstall that extension
 before installing Lapis to avoid running both copies. The extension identifier
 has changed: commands now use `lapis.*`, and the folder exclusion setting is
@@ -262,11 +271,37 @@ Vault markers remain `.lapis`; notes and vault directories need no changes.
 Create a local VSIX (the prepublish step builds and checks the extension):
 
 ```sh
-npx --yes @vscode/vsce package --no-dependencies --skip-license
+npx --yes --package pnpm@10.34.6 --package @vscode/vsce@4.0.0 -- vsce package --no-dependencies
 ```
 
-Dependencies are bundled in `dist/extension.js`. `--skip-license` permits
-local packaging while the project has no license file; it does not grant a
-license. In VS Code, use Extensions → … → Install from VSIX and select
+Dependencies are bundled in `dist/extension.js`. In VS Code, use
+Extensions → … → Install from VSIX and select
 `lapis-0.1.0.vsix`. Reload the window if prompted. Rebuild and reinstall
 the VSIX after source changes.
+
+## Version Builds And Marketplace Publishing
+
+The [release workflow](.github/workflows/release.yml) builds tags matching `v*`.
+The tag must exactly match `v` plus the version in `package.json`. It installs
+locked dependencies, runs unit tests, type-check and lint, creates a VSIX, and
+uploads it as a workflow artifact and a GitHub release asset. Tag builds do not
+publish to the Marketplace.
+
+To release a new version, update the manifest version and changelog, commit,
+then push an annotated tag such as `v0.1.1`. The existing `v0.1.0` tag predates
+the Marketplace manifest and workflow; do not move or reuse it.
+
+For Marketplace publishing:
+
+1. Add the repository Actions secret `VSCE_PAT`: an Azure DevOps personal access
+   token with **Marketplace > Manage**, belonging to an account authorized for
+   the `marianoviola` publisher. Never commit the token.
+2. In **Actions > Version build and Marketplace publish > Run workflow**, use
+   the workflow on `main`, enter the exact release tag, and enable
+   **Publish this version to the VS Code Marketplace**.
+3. The workflow rebuilds and validates that tagged source, then publishes the
+   resulting VSIX. Leaving the checkbox off only builds a downloadable artifact.
+
+Marketplace versions cannot be overwritten. Since `0.1.0` is already published,
+use a new version for the next publication. The workflow does not increment
+versions, create tags, or publish on an ordinary branch push.
