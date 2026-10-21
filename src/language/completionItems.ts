@@ -76,21 +76,27 @@ export function completionContext(text: string, offset: number): CompletionConte
 }
 
 function shortestTarget(note: NoteRecord, from: NoteRecord, notes: NoteIndex): string | undefined {
-	const path = note.relativePath.replace(/\.md$/i, '');
-	const relative = posix.relative(posix.dirname(from.relativePath), path);
-	const candidates = [...new Set([
-		note.filename.replace(/\.md$/i, ''), path,
-		relative.startsWith('../') ? relative : `./${relative}`, `/${path}`,
-		note.filename, note.relativePath,
-		relative.startsWith('../') ? `${relative}.md` : `./${relative}.md`, `/${note.relativePath}`,
-	])].sort((left, right) => left.length - right.length);
-	return candidates.find(target => {
+	const basename = note.filename.replace(/\.md$/i, '');
+	const resolvesToNote = (target: string): boolean => {
 		if (!target || /[[\]#|\r\n]/.test(target) || target.trim() !== target) {
 			return false;
 		}
 		const resolution = notes.resolve(target, from.id);
 		return resolution.kind === 'resolved' && resolution.note.id === note.id;
-	});
+	};
+	// No path-qualified candidate can be shorter than the bare filename.
+	if (resolvesToNote(basename)) {
+		return basename;
+	}
+	const path = note.relativePath.replace(/\.md$/i, '');
+	const relative = posix.relative(posix.dirname(from.relativePath), path);
+	const candidates = [...new Set([
+		basename, path,
+		relative.startsWith('../') ? relative : `./${relative}`, `/${path}`,
+		note.filename, note.relativePath,
+		relative.startsWith('../') ? `${relative}.md` : `./${relative}.md`, `/${note.relativePath}`,
+	])].sort((left, right) => left.length - right.length);
+	return candidates.find(resolvesToNote);
 }
 
 export function linkSuggestions(notes: NoteIndex, fromUri: string, context: CompletionContext): LinkSuggestion[] {

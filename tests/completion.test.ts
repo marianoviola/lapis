@@ -74,6 +74,21 @@ describe('wikilink completion', () => {
 		expect(linkSuggestions(notes, 'file:///outside.md', complete('[['))).toEqual([]);
 	});
 
+	it('rechecks short targets when duplicate filenames appear or disappear', () => {
+		const { notes, source, add } = fixture();
+		const target = () => linkSuggestions(notes, source, complete('[['))
+			.find(item => item.description === 'Goals.md')?.insertText;
+		expect(target()).toBe('Goals]]');
+		add('one/Source.md');
+		add('one/Goals.md');
+		expect(linkSuggestions(notes, 'file:///vault/one/Source.md', complete('[['))
+			.find(item => item.description === 'Goals.md')?.insertText).toBe('/Goals]]');
+		notes.remove('file:///vault/one/Goals.md');
+		expect(linkSuggestions(notes, 'file:///vault/one/Source.md', complete('[['))
+			.find(item => item.description === 'Goals.md')?.insertText).toBe('Goals]]');
+		expect(target()).toBe('Goals]]');
+	});
+
 	it('handles root-path shadowing, repeated extensions and unsupported target delimiters', () => {
 		const { notes, add } = fixture();
 		add('one/Source.md');

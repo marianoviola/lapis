@@ -9,6 +9,11 @@
 - Add a prominent feature overview and quick-start instructions to the README
   for the VS Code Marketplace listing.
 
+### Fixed
+
+- Avoid constructing longer wikilink candidates when a bare filename already
+  resolves to the intended note, preserving ambiguity and shortest-target rules.
+
 ## 0.1.0 - 2026-10-20
 
 ### Added
