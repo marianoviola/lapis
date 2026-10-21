@@ -1,6 +1,8 @@
 {
   "name": "lapis",
-  "displayName": "Lapis",
+  "publisher": "marianoviola",
+  "license": "MIT",
+  "displayName": "Lapis — Markdown Workspaces",
   "icon": "media/lapis-icon.png",
   "description": "Lightweight knowledge navigation and structured views for plain Markdown workspaces.",
   "version": "0.1.0",
