@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.1 - 2026-10-21
+
+### Changed
+
+- Add a prominent feature overview and quick-start instructions to the README
+  for the VS Code Marketplace listing.
+
 ## 0.1.0 - 2026-10-20
 
 ### Added
