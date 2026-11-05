@@ -23,6 +23,8 @@ editor, Explorer, search, and Markdown preview.
   alerts are delivered while VS Code is running or on the next launch.
 - **Edit Markdown tables** — format tables, align columns, and insert or delete
   rows and columns with explicit, undoable commands.
+- **Move content between Word and Markdown** — paste rich text from Word as
+  Markdown, or export a Markdown selection (or the full document) to `.docx`.
 - **Read richer previews** — render wikilinks, highlights, footnotes, task-list
   checkboxes, and theme-aware blockquotes in the native Markdown preview.
 - **Stay in control of your files** — notes remain ordinary Markdown, with no
@@ -136,6 +138,18 @@ plain-text view definitions using the [documented Lapis syntax](docs/bases.md).
 Commands are the primary authoring interface for Lapis: tables and wikilinks now,
 and callouts in a future slice. Completion is an optional aid, not the main
 workflow. Changes are explicit, undoable and never automatically saved.
+
+### Word and Markdown
+
+When pasting rich text that includes HTML into a Markdown editor, Lapis offers
+**Paste as Markdown** in VS Code's Paste As flow. It converts Word headings,
+paragraphs, common list items, links, tables, and inline emphasis. If the
+clipboard has no HTML, VS Code's normal paste behavior is unchanged.
+
+Run **Lapis: Export Markdown to Word** from the Command Palette to create a
+`.docx` file. A non-empty selection is exported; with no selection, the full
+document is exported. Multiple selections are joined with a blank line. The
+export does not modify or save the Markdown source.
 
 ### `.base` Views
 

@@ -14,6 +14,8 @@ import { registerTableCommands } from './tables/commands';
 import { registerInsertWikilink } from './language/insertWikilink';
 import { BaseViewProvider } from './bases/provider';
 import { NoteReminderService } from './bases/reminderService';
+import { registerPasteAsMarkdown } from './markdown/pasteAsMarkdown';
+import { registerExportToWord } from './markdown/exportToWord';
 
 export interface LapisApi {
 	extendMarkdownIt(markdown: MarkdownIt): MarkdownIt;
@@ -40,6 +42,8 @@ export function activate(context: vscode.ExtensionContext): LapisApi {
 		registerBlockquoteDecorations(output),
 		registerTableCommands(output),
 		registerInsertWikilink(workspace, output),
+		registerPasteAsMarkdown(),
+		registerExportToWord(),
 		vscode.commands.registerCommand('lapis.openBase', (uri?: vscode.Uri) => baseViews.open(uri)),
 		vscode.commands.registerCommand('lapis.openBaseSource', (uri?: vscode.Uri) => baseViews.openSource(uri)),
 		vscode.commands.registerCommand('lapis.openNote', () => openNote(workspace)),

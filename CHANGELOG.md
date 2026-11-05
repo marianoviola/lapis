@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.1.2 - 2026-11-05
+
+### Added
+
+- Paste rich text from Word into Markdown as formatted Markdown, including
+  headings, inline emphasis, links, lists and tables.
+- Export a Markdown selection or full document to a Word `.docx` file.
+
 ## 0.1.1 - 2026-10-21
 
 ### Changed

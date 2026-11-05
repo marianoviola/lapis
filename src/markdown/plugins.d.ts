@@ -15,3 +15,8 @@ declare module 'markdown-it/lib/rules_inline/text.mjs' {
 	const text: Parameters<MarkdownIt['inline']['ruler']['at']>[1];
 	export default text;
 }
+
+declare module 'turndown-plugin-gfm' {
+	import TurndownService = require('turndown');
+	export function gfm(service: TurndownService): void;
+}

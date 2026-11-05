@@ -88,6 +88,7 @@ suite('Lapis Extension Host', () => {
 		assert.ok(commands.includes('lapis.openBaseSource'));
 		assert.ok(commands.includes('lapis.manageReminders'));
 		assert.ok(commands.includes('lapis.rebuildIndex'));
+		assert.ok(commands.includes('lapis.exportMarkdownToWord'));
 		assert.ok(!commands.includes('lapislazuli.openNote'));
 		assert.ok(!commands.includes('lapislazuli.rebuildIndex'));
 		const extension = vscode.extensions.all.find(candidate => candidate.packageJSON.name === 'lapis');
