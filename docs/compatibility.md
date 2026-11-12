@@ -33,8 +33,11 @@ metadata interpretation or editing behavior across applications.
 | Reminders | Alerts are stored in VS Code workspace state and delivered by Lapis. | Portable reminder metadata, synchronization or closed-editor delivery. |
 
 The shared `.base` extension is not a compatibility declaration. Lapis currently
-supports its own constrained filters, ascending `order`, table and Kanban views,
-and grouping rules. Do not assume that a file created elsewhere will work in
+supports constrained filters including `file.inFolder`, `if` formulas and boolean
+comparisons, column `order`, explicit `ASC` / `DESC` sorting, table and Kanban
+views, and grouping rules. Without explicit `sort`, legacy ascending row sorting
+by `order` is preserved. These tested constructs do not imply support for the
+complete Obsidian formula language. Do not assume that a file created elsewhere will work in
 Lapis, or that a Lapis definition will work elsewhere, without checking its
 actual constructs. No cross-application compatibility matrix has been certified.
 

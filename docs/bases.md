@@ -42,8 +42,8 @@ so the original structure is not flattened. Empty arrays display a dash.
 Long pills use ellipses with their complete value available on hover.
 Search, sorting and grouping still use the original property values.
 
-The current implementation supports filtering, ascending order, and property
-display names. It does not yet support formulas, Timeline views, property
+The current implementation supports filtering, explicit sorting, a constrained
+formula language, and property display names. It does not yet support Timeline views, property
 editing, or writing changes back to notes.
 
 ## Minimal example
@@ -53,9 +53,10 @@ views:
   - type: table
 ```
 
-This displays every indexed note in the `.base` file's vault. The table always
+This displays every indexed note in the `.base` file's vault. By default, the table
 starts with a **Name** column, followed by properties found on the matching
-notes.
+notes. A view's `order` can place columns in a different sequence, including
+placing calculated columns before **Name**.
 
 ## Configuration
 
@@ -66,6 +67,7 @@ The top-level YAML mapping accepts these keys:
 | `filters` | Filter | Optional filter applied to every view. |
 | `views` | Sequence of views | Views to display. Each requires `type: table` or `type: kanban`. |
 | `properties` | Mapping | Optional property display-name definitions and column ordering. |
+| `formulas` | Mapping | Named, read-only calculated expressions. |
 
 Example:
 
@@ -90,12 +92,53 @@ properties:
     displayName: Due date
 ```
 
-Use `name` to label a view's tab. `properties` keeps configured columns in the order written;
+Use `name` to label a view's tab. `order` puts the listed columns first.
+Remaining columns from `properties` keep the order written;
 properties present on matching notes but not configured are added afterward
-alphabetically. A configured property appears as a column even when no
+alphabetically. Formula columns are also included. A configured property appears as a column even when no
 matching note currently has a value for it. Each property definition currently
 accepts only `displayName`. Column visibility can be toggled in the table UI;
-that choice does not change the `.base` source.
+that choice does not change the `.base` source. Property keys can use `note.`,
+`file.`, or `formula.` prefixes; for example, `file.name: {displayName: Project}`
+renames the existing name column rather than adding a second column.
+
+## Formulas
+
+Define formulas as expression strings, including YAML multiline strings:
+
+```yaml
+formulas:
+  state:
+    if(status == "active", "Active",
+      if(status == "archived" || status == "archived-experiment", "Archived", status))
+properties:
+  formula.state:
+    displayName: State
+views:
+  - type: table
+    order: [formula.state, file.name, status]
+    sort:
+      - property: formula.state
+        direction: ASC
+      - property: file.name
+        direction: ASC
+```
+
+The supported subset is scalar literals, property references, parentheses,
+`if(condition, yes, no)`, comparisons (`==`, `!=`, `<`, `<=`, `>`, `>=`),
+and boolean `&&` / `||`. Comparisons bind before `&&`, which binds before `||`.
+`if` evaluates only the selected branch, and boolean operators short-circuit.
+Conditions use truthiness: missing, null, false, zero and empty strings are false.
+Comparisons require compatible scalar types; missing values never match.
+References may use frontmatter names, `note.`, the allowlisted `file.` properties,
+or another `formula.` name, including a formula declared later.
+Unknown formulas, circular references, unsupported functions and malformed
+expressions produce diagnostics. Formulas are limited to 512 tokens and 64
+levels of expression nesting. No JavaScript or arbitrary code is executed.
+Arithmetic, date functions, method calls and the `this` namespace are not supported.
+
+Formula values are available in columns, comparison filters, sorting, search
+and Kanban grouping, without modifying note metadata.
 
 ## Kanban
 
@@ -108,7 +151,8 @@ views:
 ```
 
 `groupBy` is supported on Kanban views and defaults to `status`. It accepts one
-property reference, with optional `note.` or an allowlisted `file.` namespace.
+property reference, with optional `note.`, an allowlisted `file.` namespace,
+or a defined `formula.` name.
 The toolbar can also show any table view as a board without editing YAML.
 The grouping selector offers matching-note properties, configured columns,
 `file.name`, `file.folder` and the view's declared grouping property.
@@ -150,6 +194,12 @@ operator (`and`, `or`, or `not`) and a non-empty sequence of child filters.
 Filters at the top level and on a view are both applied, so a note must pass
 both.
 
+`file.inFolder("Projects")` is also supported as a filter, alone or in a logical
+mapping. It selects notes directly in that vault-relative folder and its
+descendants, not similarly named folders such as `Projects-old` or
+`Elsewhere/Projects`. An empty folder selects the whole vault. Leading/trailing
+slashes are accepted; `.` / `..` path segments and backslashes are rejected.
+
 ```yaml
 filters:
   and:
@@ -189,16 +239,26 @@ the results.
 
 ## Ordering and results
 
-Set `order` to a YAML sequence of property references. Rows are sorted
-ascending by each reference in sequence; ties retain their original index
-order. Missing and `null` values sort last. `note.` is optional, and the same
-allowlisted `file.` properties available to filters can be used:
+Set `order` to a YAML sequence of property references to arrange columns.
+Set `sort` to a sequence of `{property, direction}` mappings to sort rows,
+using `ASC` or `DESC`. Each sort key is applied in sequence; ties retain their
+original index order. Missing and `null` values sort last in both directions.
+`note.` is optional; the allowlisted `file.` properties and defined `formula.`
+properties are supported:
 
 ```yaml
 views:
   - type: table
     order: [status, file.folder, file.name]
+    sort:
+      - property: file.mtime
+        direction: DESC
 ```
+
+For existing Lapis definitions, omitting `sort` preserves legacy ascending
+row sorting by `order`. An explicit `sort: []` keeps index order. `sort` never
+changes the column sequence. Columns not listed in `order` remain available
+and can be hidden using the preview's property controls.
 
 The table is read-only. Selecting a row's name opens its Markdown note in the
 native editor. The view includes only notes belonging to the vault that

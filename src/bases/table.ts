@@ -1,6 +1,7 @@
 import type { NoteRecord, PropertyValue } from '../domain/note';
 import type { BaseConfig, BasePropertyReference, BaseView } from './base';
 import { queryBaseView, resolveBaseProperty } from './evaluate';
+import { parseBaseReference } from './expression';
 
 export interface BaseTableColumn {
 	readonly key: string;
@@ -24,26 +25,33 @@ export function projectBaseTable(
 	notes: Iterable<NoteRecord>,
 ): BaseTableProjection {
 	const selected = queryBaseView(config, view, notes);
-	const configuredProperties = Object.keys(config.properties);
+	const referenceForKey = (key: string): BasePropertyReference => {
+		return /^(note|file|formula)\./.test(key) ? parseBaseReference(key) : { scope: 'note', name: key };
+	};
+	const keyForReference = (property: BasePropertyReference) => `${property.scope}.${property.name}`;
+	const configuredProperties = Object.keys(config.properties).map(referenceForKey);
 	const discoveredProperties = new Set(selected.flatMap(note => Object.keys(note.properties)));
 	const properties = [
+		...(view.order ?? []),
+		{ scope: 'file' as const, name: 'name' },
 		...configuredProperties,
-		...[...discoveredProperties].filter(name => !Object.hasOwn(config.properties, name)).sort((left, right) => left.localeCompare(right)),
+		...Object.keys(config.formulas ?? {}).map(name => ({ scope: 'formula' as const, name })),
+		...[...discoveredProperties].sort((left, right) => left.localeCompare(right)).map(name => ({ scope: 'note' as const, name })),
 	];
-	const columns: BaseTableColumn[] = [
-		{ key: 'file.name', label: 'Name' },
-		...properties.map(name => ({
-			key: `note.${name}`,
-			label: config.properties[name]?.displayName || name,
-		})),
-	];
+	const unique = [...new Map(properties.map(property => [keyForReference(property), property])).values()];
+	const columns: BaseTableColumn[] = unique.map(property => {
+		const key = keyForReference(property);
+		return {
+			key,
+			label: config.properties[key]?.displayName
+				|| (property.scope === 'note' ? config.properties[property.name]?.displayName : undefined)
+				|| (key === 'file.name' ? 'Name' : property.name),
+		};
+	});
 	const rows = selected.map(note => ({
 		noteUri: note.id,
 		title: note.title,
-		cells: [
-			note.filename.replace(/\.md$/i, ''),
-			...properties.map(name => formatValue(note.properties[name])),
-		],
+		cells: unique.map(property => formatValue(resolveBaseProperty(note, property, config))),
 	}));
 	return Object.freeze({
 		columns: Object.freeze(columns.map(column => Object.freeze(column))),
@@ -67,7 +75,7 @@ export function projectBaseBoard(
 	const table = projectBaseTable(config, view, selected);
 	const groups = new Map<string, { key: string; label: string; rows: BaseTableRow[] }>();
 	for (const [index, note] of selected.entries()) {
-		const value = resolveBaseProperty(note, groupBy);
+		const value = resolveBaseProperty(note, groupBy, config);
 		const empty = value === undefined || value === null || value === '';
 		const key = empty ? 'ungrouped' : `${typeof value}:${JSON.stringify(value)}`;
 		let group = groups.get(key);

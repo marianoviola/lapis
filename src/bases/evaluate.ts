@@ -1,19 +1,25 @@
 import type { NoteRecord, PropertyValue } from '../domain/note';
 import type { BaseComparison, BaseConfig, BaseFilter, BasePropertyReference, BaseScalar, BaseView } from './base';
+import { compareBaseValues, evaluateBaseExpression } from './expression';
 
 const missing = Symbol('missing');
 type Comparable = BaseScalar | typeof missing | readonly PropertyValue[] | PropertyValue;
 
-export function evaluateBaseFilter(filter: BaseFilter, note: NoteRecord): boolean {
+export function evaluateBaseFilter(filter: BaseFilter, note: NoteRecord, config?: BaseConfig): boolean {
 	switch (filter.kind) {
+		case 'inFolder': {
+			const folder = resolveProperty(note, { scope: 'file', name: 'folder' });
+			return typeof folder === 'string'
+				&& (!filter.folder || folder === filter.folder || folder.startsWith(`${filter.folder}/`));
+		}
 		case 'comparison':
-			return evaluateComparison(filter, note);
+			return evaluateComparison(filter, note, config);
 		case 'and':
-			return filter.filters.every(child => evaluateBaseFilter(child, note));
+			return filter.filters.every(child => evaluateBaseFilter(child, note, config));
 		case 'or':
-			return filter.filters.some(child => evaluateBaseFilter(child, note));
+			return filter.filters.some(child => evaluateBaseFilter(child, note, config));
 		case 'not':
-			return !filter.filters.every(child => evaluateBaseFilter(child, note));
+			return !filter.filters.every(child => evaluateBaseFilter(child, note, config));
 	}
 }
 
@@ -23,15 +29,19 @@ export function queryBaseView(
 	notes: Iterable<NoteRecord>,
 ): readonly NoteRecord[] {
 	const selected = [...notes].filter(note =>
-		(!config.filters || evaluateBaseFilter(config.filters, note))
-		&& (!view.filters || evaluateBaseFilter(view.filters, note)));
-	if (!view.order?.length) {
+		(!config.filters || evaluateBaseFilter(config.filters, note, config))
+		&& (!view.filters || evaluateBaseFilter(view.filters, note, config)));
+	const sort = view.sort ?? view.order?.map(property => ({ property, direction: 'ASC' as const }));
+	if (!sort?.length) {
 		return Object.freeze(selected);
 	}
 	const ordered = selected.map((note, index) => ({ note, index }));
 	ordered.sort((left, right) => {
-		for (const property of view.order ?? []) {
-			const comparison = compareForOrder(resolveProperty(left.note, property), resolveProperty(right.note, property));
+		for (const { property, direction } of sort) {
+			const a = resolveProperty(left.note, property, config);
+			const b = resolveProperty(right.note, property, config);
+			const absent = a === missing || a === null || b === missing || b === null;
+			const comparison = compareForOrder(a, b) * (direction === 'DESC' && !absent ? -1 : 1);
 			if (comparison !== 0) {
 				return comparison;
 			}
@@ -41,45 +51,20 @@ export function queryBaseView(
 	return Object.freeze(ordered.map(item => item.note));
 }
 
-function evaluateComparison(comparison: BaseComparison, note: NoteRecord): boolean {
-	const actual = resolveProperty(note, comparison.property);
-	if (actual === missing) {
-		return false;
-	}
-	if (comparison.operator === '==' || comparison.operator === '!=') {
-		if (!sameScalarType(actual, comparison.value)) {
-			return false;
-		}
-		return comparison.operator === '==' ? actual === comparison.value : actual !== comparison.value;
-	}
-	if (typeof actual === 'number' && typeof comparison.value === 'number') {
-		switch (comparison.operator) {
-			case '<': return actual < comparison.value;
-			case '<=': return actual <= comparison.value;
-			case '>': return actual > comparison.value;
-			case '>=': return actual >= comparison.value;
-		}
-	}
-	if (typeof actual === 'string' && typeof comparison.value === 'string') {
-		const order = actual.localeCompare(comparison.value);
-		switch (comparison.operator) {
-			case '<': return order < 0;
-			case '<=': return order <= 0;
-			case '>': return order > 0;
-			case '>=': return order >= 0;
-		}
-	}
-	return false;
+function evaluateComparison(comparison: BaseComparison, note: NoteRecord, config?: BaseConfig): boolean {
+	const actual = resolveProperty(note, comparison.property, config);
+	return compareBaseValues(actual === missing ? undefined : actual, comparison.operator, comparison.value);
 }
 
-function sameScalarType(actual: Comparable, expected: BaseScalar): actual is BaseScalar {
-	return actual !== missing
-		&& typeof actual === typeof expected
-		&& (actual === null) === (expected === null)
-		&& (typeof actual === 'string' || typeof actual === 'number' || typeof actual === 'boolean' || actual === null);
-}
-
-function resolveProperty(note: NoteRecord, property: BasePropertyReference): Comparable {
+function resolveProperty(note: NoteRecord, property: BasePropertyReference, config?: BaseConfig): Comparable {
+	if (property.scope === 'formula') {
+		const expression = config?.formulas?.[property.name];
+		if (!expression) {
+			throw new Error(`Unknown formula "${property.name}".`);
+		}
+		const value = evaluateBaseExpression(expression, reference => resolveBaseProperty(note, reference, config));
+		return value === undefined ? missing : value;
+	}
 	if (property.scope === 'file') {
 		switch (property.name) {
 			case 'name': return note.filename.replace(/\.md$/i, '');
@@ -104,8 +89,8 @@ function resolveProperty(note: NoteRecord, property: BasePropertyReference): Com
 	return note.properties[property.name];
 }
 
-export function resolveBaseProperty(note: NoteRecord, property: BasePropertyReference): PropertyValue | undefined {
-	const value = resolveProperty(note, property);
+export function resolveBaseProperty(note: NoteRecord, property: BasePropertyReference, config?: BaseConfig): PropertyValue | undefined {
+	const value = resolveProperty(note, property, config);
 	return value === missing ? undefined : value;
 }
 

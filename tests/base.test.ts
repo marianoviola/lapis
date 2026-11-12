@@ -83,7 +83,7 @@ describe('.base YAML parsing', () => {
 
 	it('rejects unknown configuration and view keys instead of ignoring them', () => {
 		const result = parseBase([
-			'formulas:',
+			'unknown:',
 			'  total: 1',
 			'views:',
 			'  - type: table',
@@ -92,7 +92,7 @@ describe('.base YAML parsing', () => {
 
 		expect(result.config).toBeUndefined();
 		expect(result.diagnostics.map(issue => issue.message)).toEqual(expect.arrayContaining([
-			'Unsupported .base key "formulas".',
+			'Unsupported .base key "unknown".',
 			'Unsupported key "groupBy" in view 1.',
 		]));
 	});
@@ -107,7 +107,7 @@ describe('.base YAML parsing', () => {
 
 		expect(result.config).toBeUndefined();
 		expect(result.diagnostics.map(issue => issue.message)).toEqual(expect.arrayContaining([
-			'The "formula" namespace is not supported in filters yet.',
+			'Unknown formula "total".',
 			'View 1 has unsupported type "timeline"; use "table" or "kanban".',
 		]));
 	});
@@ -148,8 +148,29 @@ describe('.base YAML parsing', () => {
 
 		expect(result.config).toBeUndefined();
 		expect(result.diagnostics.map(issue => issue.message)).toEqual(expect.arrayContaining([
-			'The "formula" namespace is not supported in view order yet.',
+			'Unknown formula "total".',
 			'Unsupported file property "file.size" in view order.',
 		]));
+	});
+
+	it.each([
+		'formulas: []',
+		'formulas:\n  total: 1',
+		'formulas:\n  total: "if(true, 1)"',
+		'formulas:\n  total: "unknown(1)"',
+		'formulas:\n  total: "file.size"',
+		'formulas:\n  total: "formula.absent"',
+		'formulas:\n  a: "formula.b"\n  b: "formula.a"',
+		'formulas:\n  a: "formula.a"',
+		'properties:\n  formula.absent:\n    displayName: Missing',
+		'views:\n  - type: table\n    sort: {}',
+		'views:\n  - type: table\n    sort: [file.name]',
+		'views:\n  - type: table\n    sort: [{property: file.name, direction: down}]',
+		'views:\n  - type: table\n    sort: [{property: file.name, direction: ASC, unknown: true}]',
+		'filters: file.inFolder("../Projects")',
+	])('diagnoses invalid formulas, references and sort entries: %s', source => {
+		const result = parseBase(source);
+		expect(result.config).toBeUndefined();
+		expect(result.diagnostics.length).toBeGreaterThan(0);
 	});
 });

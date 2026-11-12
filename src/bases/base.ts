@@ -1,9 +1,10 @@
 import { parseDocument } from 'yaml';
+import { baseFileProperties, expressionReferences, parseBaseExpression, type BaseExpression } from './expression';
 
 export type BaseScalar = string | number | boolean | null;
 
 export interface BasePropertyReference {
-	readonly scope: 'note' | 'file';
+	readonly scope: 'note' | 'file' | 'formula';
 	readonly name: string;
 }
 
@@ -15,6 +16,7 @@ export interface BaseComparison {
 }
 
 export type BaseFilter = BaseComparison
+	| { readonly kind: 'inFolder'; readonly folder: string }
 	| { readonly kind: 'and' | 'or'; readonly filters: readonly BaseFilter[] }
 	| { readonly kind: 'not'; readonly filters: readonly BaseFilter[] };
 
@@ -23,6 +25,7 @@ export interface BaseView {
 	readonly name?: string;
 	readonly filters?: BaseFilter;
 	readonly order?: readonly BasePropertyReference[];
+	readonly sort?: readonly { readonly property: BasePropertyReference; readonly direction: 'ASC' | 'DESC' }[];
 	readonly groupBy?: BasePropertyReference;
 }
 
@@ -34,6 +37,7 @@ export interface BaseConfig {
 	readonly filters?: BaseFilter;
 	readonly views: readonly BaseView[];
 	readonly properties: Readonly<Record<string, BasePropertyDefinition>>;
+	readonly formulas?: Readonly<Record<string, BaseExpression>>;
 }
 
 export interface BaseDiagnostic {
@@ -46,8 +50,8 @@ export interface BaseParseResult {
 	readonly diagnostics: readonly BaseDiagnostic[];
 }
 
-const fileProperties = new Set(['name', 'path', 'folder', 'ext', 'ctime', 'mtime']);
-const allowedRootKeys = new Set(['filters', 'views', 'properties']);
+const fileProperties = baseFileProperties;
+const allowedRootKeys = new Set(['filters', 'views', 'properties', 'formulas']);
 
 export function parseBase(text: string): BaseParseResult {
 	const document = parseDocument(text, {
@@ -86,6 +90,7 @@ export function parseBase(text: string): BaseParseResult {
 
 class BaseValidator {
 	readonly diagnostics: BaseDiagnostic[] = [];
+	private formulas: Record<string, BaseExpression> = Object.create(null);
 
 	constructor(private readonly source: string) {}
 
@@ -101,6 +106,7 @@ class BaseValidator {
 				this.issue(`Unsupported .base key "${key}".`, this.lineOf(key));
 			}
 		}
+		this.readFormulas(value.get('formulas'));
 		const filters = value.has('filters') ? this.filter(value.get('filters'), 'filters') : undefined;
 		const views = value.has('views') ? this.views(value.get('views')) : [];
 		const properties = value.has('properties') ? this.properties(value.get('properties')) : Object.create(null) as Record<string, BasePropertyDefinition>;
@@ -108,6 +114,7 @@ class BaseValidator {
 			filters,
 			views: Object.freeze(views),
 			properties: Object.freeze(properties),
+			formulas: Object.freeze(this.formulas),
 		});
 	}
 
@@ -122,7 +129,7 @@ class BaseValidator {
 				this.issue(`View ${index + 1} must be a YAML mapping.`, this.lineOf('views'));
 				continue;
 			}
-			const allowedKeys = new Set(['type', 'name', 'filters', 'order', ...(item.get('type') === 'kanban' ? ['groupBy'] : [])]);
+			const allowedKeys = new Set(['type', 'name', 'filters', 'order', 'sort', ...(item.get('type') === 'kanban' ? ['groupBy'] : [])]);
 			for (const key of item.keys()) {
 				if (typeof key !== 'string' || !allowedKeys.has(key)) {
 					this.issue(`Unsupported key "${String(key)}" in view ${index + 1}.`, this.lineOf(String(key)));
@@ -139,6 +146,7 @@ class BaseValidator {
 			}
 			const filters = item.has('filters') ? this.filter(item.get('filters'), `views[${index}].filters`) : undefined;
 			const order = item.has('order') ? this.order(item.get('order'), index) : undefined;
+			const sort = item.has('sort') ? this.sort(item.get('sort'), index) : undefined;
 			const groupBy = type === 'kanban'
 				? this.reference(item.has('groupBy') ? item.get('groupBy') : 'status', 'groupBy')
 				: undefined;
@@ -147,6 +155,7 @@ class BaseValidator {
 				name: typeof name === 'string' ? name : undefined,
 				filters,
 				order: order ? Object.freeze(order) : undefined,
+				sort,
 				groupBy,
 			}));
 		}
@@ -192,21 +201,39 @@ class BaseValidator {
 	}
 
 	private comparison(source: string, path: string): BaseFilter | undefined {
+		const folder = /^\s*file\.inFolder\(\s*("(?:\\.|[^"\\])*"|'(?:''|[^'])*')\s*\)\s*$/.exec(source);
+		if (folder) {
+			try {
+				const value: string = folder[1].startsWith('"') ? JSON.parse(folder[1]) : folder[1].slice(1, -1).replace(/''/g, "'");
+				if (value.split('/').some(part => part === '.' || part === '..') || value.includes('\\')) {
+					throw new SyntaxError('Folder paths must be vault-relative paths without "." or ".." segments.');
+				}
+				return Object.freeze({ kind: 'inFolder', folder: value.replace(/^\/+|\/+$/g, '') });
+			} catch (error) {
+				if (!(error instanceof SyntaxError)) { throw error; }
+				this.issue(`Invalid folder filter: ${error.message}`, this.lineOf('filters'));
+				return undefined;
+			}
+		}
 		const match = /^\s*(?:(note|file|formula|this)\.)?([A-Za-z_][A-Za-z0-9_-]*)\s*(==|!=|<=|>=|<|>)\s*("(?:\\.|[^"\\])*"|'(?:''|[^'])*'|true|false|null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*$/.exec(source);
 		if (!match) {
 			this.issue(`Unsupported filter expression "${source}". Use a property comparison with a quoted string, number, boolean, or null.`, this.lineOf(path.split('.').at(-1) ?? path));
 			return undefined;
 		}
 		const [, scope, name, operator, rawValue] = match;
-		if (scope === 'formula' || scope === 'this') {
+		if (scope === 'this') {
 			this.issue(`The "${scope}" namespace is not supported in filters yet.`, this.lineOf(name));
+			return undefined;
+		}
+		if (scope === 'formula' && !Object.hasOwn(this.formulas, name)) {
+			this.issue(`Unknown formula "${name}".`, this.lineOf(name));
 			return undefined;
 		}
 		if (scope === 'file' && !fileProperties.has(name)) {
 			this.issue(`Unsupported file property "file.${name}".`, this.lineOf(name));
 			return undefined;
 		}
-		const property: BasePropertyReference = Object.freeze({ scope: scope === 'file' ? 'file' : 'note', name });
+		const property: BasePropertyReference = Object.freeze({ scope: scope === 'file' || scope === 'formula' ? scope : 'note', name });
 		let value: BaseScalar;
 		try {
 			if (rawValue.startsWith('"')) {
@@ -247,7 +274,7 @@ class BaseValidator {
 		return properties;
 	}
 
-	private reference(value: unknown, context: 'order' | 'groupBy'): BasePropertyReference | undefined {
+	private reference(value: unknown, context: 'order' | 'groupBy' | 'sort' | 'properties'): BasePropertyReference | undefined {
 		if (typeof value !== 'string') {
 			this.issue(`View "${context}" must be a property reference string.`, this.lineOf(context));
 			return undefined;
@@ -258,14 +285,79 @@ class BaseValidator {
 			return undefined;
 		}
 		const [, scope, name] = match;
-		if (scope === 'formula' || scope === 'this') {
+		if (scope === 'this') {
 			this.issue(`The "${scope}" namespace is not supported in view ${context} yet.`, this.lineOf(value));
+		} else if (scope === 'formula' && !Object.hasOwn(this.formulas, name)) {
+			this.issue(`Unknown formula "${name}".`, this.lineOf(value));
 		} else if (scope === 'file' && !fileProperties.has(name)) {
 			this.issue(`Unsupported file property "file.${name}" in view ${context}.`, this.lineOf(value));
 		} else {
-			return Object.freeze({ scope: scope === 'file' ? 'file' : 'note', name });
+			return Object.freeze({ scope: scope === 'file' || scope === 'formula' ? scope : 'note', name });
 		}
 		return undefined;
+	}
+
+	private sort(value: unknown, index: number): BaseView['sort'] {
+		if (!Array.isArray(value)) {
+			this.issue(`View ${index + 1} "sort" must be a sequence.`, this.lineOf('sort'));
+			return undefined;
+		}
+		const result: NonNullable<BaseView['sort']>[number][] = [];
+		for (const item of value) {
+			if (!(item instanceof Map) || [...item.keys()].some(key => key !== 'property' && key !== 'direction')) {
+				this.issue('Each sort entry must be a mapping with "property" and "direction".', this.lineOf('sort'));
+				continue;
+			}
+			const property = this.reference(item.get('property'), 'sort');
+			const direction = item.get('direction');
+			if (direction !== 'ASC' && direction !== 'DESC') {
+				this.issue('Sort direction must be "ASC" or "DESC".', this.lineOf('direction'));
+			} else if (property) {
+				result.push(Object.freeze({ property, direction }));
+			}
+		}
+		return Object.freeze(result);
+	}
+
+	private readFormulas(value: unknown): void {
+		if (value === undefined) { return; }
+		if (!(value instanceof Map)) {
+			this.issue('"formulas" must be a YAML mapping.', this.lineOf('formulas'));
+			return;
+		}
+		for (const [name, source] of value) {
+			if (typeof name !== 'string' || !/^[A-Za-z_][A-Za-z0-9_-]*$/.test(name) || typeof source !== 'string') {
+				this.issue('Each formula must have an identifier name and an expression string.', this.lineOf(String(name)));
+				continue;
+			}
+			try {
+				this.formulas[name] = parseBaseExpression(source);
+			} catch (error) {
+				if (!(error instanceof SyntaxError)) { throw error; }
+				this.issue(`Invalid formula "${name}": ${error.message}`, this.lineOf(name));
+			}
+		}
+		const visited = new Set<string>();
+		const active = new Set<string>();
+		const visit = (name: string): void => {
+			if (active.has(name)) {
+				this.issue(`Circular formula reference "${name}".`, this.lineOf(name));
+				return;
+			}
+			if (visited.has(name)) { return; }
+			visited.add(name);
+			active.add(name);
+			for (const reference of expressionReferences(this.formulas[name])) {
+				if (reference.scope !== 'formula') { continue; }
+				if (!Object.hasOwn(this.formulas, reference.name)) {
+					this.issue(`Unknown formula "${reference.name}".`, this.lineOf(name));
+				} else {
+					visit(reference.name);
+				}
+			}
+			active.delete(name);
+		};
+		for (const name of Object.keys(this.formulas)) { visit(name); }
 	}
 
 	private properties(value: unknown): Record<string, BasePropertyDefinition> {
@@ -278,6 +370,9 @@ class BaseValidator {
 			if (typeof key !== 'string' || !(definition instanceof Map)) {
 				this.issue('Each property definition must be a mapping.', this.lineOf(String(key)));
 				continue;
+			}
+			if (/^(note|file|formula|this)\./.test(key)) {
+				this.reference(key, 'properties');
 			}
 			for (const option of definition.keys()) {
 				if (option !== 'displayName') {

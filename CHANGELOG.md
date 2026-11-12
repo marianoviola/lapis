@@ -1,6 +1,23 @@
 # Changelog
 
-## Unreleased
+## 0.1.3 - 2026-11-12
+
+### Added
+
+- Base filters with recursive, vault-relative `file.inFolder("Projects")` matching.
+- Read-only Base formulas with nested `if`, scalar comparisons, `&&` / `||`,
+  property references and validated formula dependencies. Calculated values work
+  in columns, filters, sorting, search and Kanban groups.
+- Explicit Base `sort` entries with `ASC` / `DESC` directions and stable ties.
+
+### Changed
+
+- Base `order` now also arranges columns, including formula and file properties.
+  Columns not listed remain available after the ordered columns. Existing
+  ascending row sorting by `order` is preserved when `sort` is absent; add an
+  explicit `sort` to sort independently, or `sort: []` to retain index order.
+- Namespaced property display names, including `file.name` and `formula.state`,
+  apply to their existing columns without creating duplicate note properties.
 
 ## 0.1.2 - 2026-11-05
 

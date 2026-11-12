@@ -40,15 +40,18 @@ export function renderBasePage(input: BasePageInput, nonce: string): string {
 				const note = notes.get(row.noteUri)!;
 				const reminder = reminders.get(row.noteUri);
 				return {
-					...row, path: note.relativePath, reminder: reminder?.due,
+					...row, name: note.filename.replace(/\.md$/i, ''), path: note.relativePath, reminder: reminder?.due,
 					tags: projectTags(note.properties.tags),
 					lists: Object.fromEntries(Object.entries(note.properties).flatMap(([name, value]) =>
 						name !== 'tags' && Array.isArray(value) ? [[`note.${name}`, value.map(formatListItem)]] : [])),
 					canRemind: !!reminder || futureDateProperties(note.properties).length > 0,
 					groupValues: Object.fromEntries(groups.map(group => {
 						const dot = group.key.indexOf('.');
-						const property: BasePropertyReference = { scope: group.key.startsWith('file.') ? 'file' : 'note', name: group.key.slice(dot + 1) };
-						const value = resolveBaseProperty(note, property);
+						const property: BasePropertyReference = {
+							scope: group.key.startsWith('file.') ? 'file' : group.key.startsWith('formula.') ? 'formula' : 'note',
+							name: group.key.slice(dot + 1),
+						};
+						const value = resolveBaseProperty(note, property, config);
 						const empty = value === undefined || value === null || value === '';
 						return [group.key, { key: empty ? 'ungrouped' : `${typeof value}:${JSON.stringify(value)}`, label: empty ? 'No value' : formatValue(value) }];
 					})),
@@ -193,7 +196,7 @@ const script = `
 	const nameLine = row => {
 		const line = element('div', undefined, 'note-line');
 		const file = icon('file'); file.classList.add('file-icon'); line.append(file);
-		const link = element('button', row.cells[0], 'note-link');
+		const link = element('button', row.name, 'note-link');
 		link.type = 'button'; link.title = row.path; link.setAttribute('aria-label', 'Open ' + row.title);
 		link.addEventListener('click', () => send('open-note', {uri:row.noteUri})); line.append(link);
 		if (row.canRemind) {
@@ -237,7 +240,7 @@ const script = `
 			const option = element('option',group.label); option.value = group.key; return option;
 		}));
 		$('group').value = state.groupBy;
-		$('columns').replaceChildren(...view.columns.slice(1).map(column => {
+		$('columns').replaceChildren(...view.columns.filter(column => column.key !== 'file.name').map(column => {
 			const label = element('label'); const checkbox = element('input');
 			checkbox.type = 'checkbox'; checkbox.checked = !state.hidden.includes(column.key);
 			checkbox.addEventListener('change', () => {
@@ -262,7 +265,7 @@ const script = `
 				columns.forEach(column => {
 					const cell = element('td'); cell.title = row.cells[column.index];
 					if (column.key === 'note.tags' || Object.hasOwn(row.lists, column.key)) cell.className = 'list-cell';
-					if (column.index === 0) {cell.className = 'name-cell'; cell.append(nameLine(row));}
+					if (column.key === 'file.name') {cell.className = 'name-cell'; cell.append(nameLine(row));}
 					else cell.append(valueNode(row.cells[column.index], column.key, row));
 					tr.append(cell);
 				});
@@ -282,7 +285,7 @@ const script = `
 				group.rows.forEach(row => {
 					const card = element('article',undefined,'card'); card.append(nameLine(row));
 					const fields = element('div',undefined,'card-fields');
-					columns.filter(column => column.index > 0 && column.key !== state.groupBy && row.cells[column.index]).forEach(column => {
+					columns.filter(column => column.key !== 'file.name' && column.key !== state.groupBy && row.cells[column.index]).forEach(column => {
 						const value = element('div',undefined,'field-value'); value.title = row.cells[column.index]; value.append(valueNode(row.cells[column.index],column.key,row));
 						fields.append(element('span',column.label,'field-label'),value);
 					});

@@ -38,15 +38,15 @@ describe('.base table projection', () => {
 		const projection = projectBaseTable(parsed.config!, parsed.config!.views[0], records);
 
 		expect(projection.columns).toEqual([
+			{ key: 'note.rank', label: 'rank' },
 			{ key: 'file.name', label: 'Name' },
 			{ key: 'note.status', label: 'State' },
 			{ key: 'note.missing', label: 'Planned field' },
 			{ key: 'note.owner', label: 'owner' },
-			{ key: 'note.rank', label: 'rank' },
 		]);
 		expect(projection.rows).toEqual([
-			{ noteUri: 'file:///vault/first.md', title: 'first', cells: ['first', 'active', '', '', '1'] },
-			{ noteUri: 'file:///vault/later.md', title: 'later', cells: ['later', 'active', '', 'Ada', '2'] },
+			{ noteUri: 'file:///vault/first.md', title: 'first', cells: ['1', 'first', 'active', '', ''] },
+			{ noteUri: 'file:///vault/later.md', title: 'later', cells: ['2', 'later', 'active', '', 'Ada'] },
 		]);
 		expect(Object.isFrozen(projection.rows)).toBe(true);
 		expect(Object.isFrozen(projection.rows[0].cells)).toBe(true);
