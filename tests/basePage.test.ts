@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseBase } from '../src/bases/base';
 import { renderBasePage } from '../src/bases/page';
 import { parseNote } from '../src/index/parseNote';
+import { NoteIndex } from '../src/index/noteIndex';
 
 describe('Base preview page', () => {
 	it('provides a toolbar and safely serializes notes and configuration', () => {
@@ -103,5 +104,51 @@ describe('Base preview page', () => {
 		}
 		expect(html).not.toContain('<img src=x');
 		expect(JSON.stringify(note.properties)).toEqual(originalProperties);
+	});
+
+	it('resolves frontmatter wikilinks for scalar and list values without producing HTML', () => {
+		const source = (path: string, text: string) => ({
+			uri: `file:///vault/${path}`, rootUri: 'file:///vault', relativePath: path, dirty: false, text,
+		});
+		const notes = new NoteIndex(async () => undefined);
+		const currentSource = source('Current.md', [
+			'---',
+			'summary: "See [[Target]] and [[Missing|<script>]]"',
+			'related: ["Before [[Target|Friendly]]", "[[Twin]]"]',
+			'---',
+		].join('\n'));
+		const targetSource = source('Target.md', '---\ntitle: Target title\n---\n');
+		const twinASource = source('first/Twin.md', '---\ntitle: Twin A\n---\n');
+		const twinBSource = source('second/Twin.md', '---\ntitle: Twin B\n---\n');
+		for (const noteSource of [currentSource, targetSource, twinASource, twinBSource]) {
+			notes.upsert(noteSource);
+		}
+		const target = parseNote(targetSource);
+		const indexedNotes = notes.getNotes();
+		const html = renderBasePage({
+			title: 'Notes.base',
+			result: parseBase('views:\n  - type: kanban'),
+			notes: indexedNotes,
+			reminders: [],
+			resolveWikilink: (link, fromUri) => notes.resolve(link, fromUri),
+		}, 'nonce');
+		const data = JSON.parse(html.match(/const data = (.*);\n/)![1]);
+		const row = data.views[0].rows.find((item: { path: string }) => item.path === 'Current.md');
+
+		expect(row.linkedValues['note.summary'][0]).toEqual([
+			{ text: 'See ' },
+			{ text: 'Target title', uri: target.id, title: 'Open Target.md' },
+			{ text: ' and ' },
+			{ text: '<script>', state: 'missing', title: 'Unresolved wikilink' },
+		]);
+		expect(row.linkedValues['note.related'][0]).toEqual([
+			{ text: 'Before ' },
+			{ text: 'Friendly', uri: target.id, title: 'Open Target.md' },
+		]);
+		expect(row.linkedValues['note.related'][1]).toEqual([
+			{ text: 'Twin', state: 'ambiguous', title: 'Ambiguous wikilink: first/Twin.md, second/Twin.md' },
+		]);
+		expect(html).toContain("send('open-note', {uri:segment.uri})");
+		expect(html).not.toContain('<script>');
 	});
 });

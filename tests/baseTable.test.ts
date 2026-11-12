@@ -80,6 +80,29 @@ describe('.base table projection', () => {
 		expect(Object.isFrozen(groups[0].rows)).toBe(true);
 	});
 
+	it('orders configured groups first and preserves first appearance for the rest', () => {
+		const parsed = parseBase('views:\n  - type: kanban\n    groupBy: status\n    groupOrder: [done, null, active]');
+		const records = [
+			note('first.md', 'status: review'),
+			note('second.md', 'status: active'),
+			note('third.md', 'status: null'),
+			note('fourth.md', 'status: done'),
+			note('fifth.md', 'status: blocked'),
+			note('sixth.md', 'status: review'),
+		];
+
+		const groups = projectBaseBoard(parsed.config!, parsed.config!.views[0], records);
+
+		expect(groups.map(group => [group.key, group.label])).toEqual([
+			['string:"done"', 'done'],
+			['ungrouped', 'No value'],
+			['string:"active"', 'active'],
+			['string:"review"', 'review'],
+			['string:"blocked"', 'blocked'],
+		]);
+		expect(groups[3].rows.map(row => row.title)).toEqual(['first', 'sixth']);
+	});
+
 	it('distinguishes typed values with identical display labels and allows file grouping', () => {
 		const config = parseBase('views:\n  - type: kanban').config!;
 		const records = [note('one.md', 'status: true'), note('two.md', 'status: "true"')];

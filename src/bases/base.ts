@@ -27,6 +27,7 @@ export interface BaseView {
 	readonly order?: readonly BasePropertyReference[];
 	readonly sort?: readonly { readonly property: BasePropertyReference; readonly direction: 'ASC' | 'DESC' }[];
 	readonly groupBy?: BasePropertyReference;
+	readonly groupOrder?: readonly BaseScalar[];
 }
 
 export interface BasePropertyDefinition {
@@ -129,7 +130,7 @@ class BaseValidator {
 				this.issue(`View ${index + 1} must be a YAML mapping.`, this.lineOf('views'));
 				continue;
 			}
-			const allowedKeys = new Set(['type', 'name', 'filters', 'order', 'sort', ...(item.get('type') === 'kanban' ? ['groupBy'] : [])]);
+			const allowedKeys = new Set(['type', 'name', 'filters', 'order', 'sort', ...(item.get('type') === 'kanban' ? ['groupBy', 'groupOrder'] : [])]);
 			for (const key of item.keys()) {
 				if (typeof key !== 'string' || !allowedKeys.has(key)) {
 					this.issue(`Unsupported key "${String(key)}" in view ${index + 1}.`, this.lineOf(String(key)));
@@ -150,6 +151,9 @@ class BaseValidator {
 			const groupBy = type === 'kanban'
 				? this.reference(item.has('groupBy') ? item.get('groupBy') : 'status', 'groupBy')
 				: undefined;
+			const groupOrder = type === 'kanban' && item.has('groupOrder')
+				? this.groupOrder(item.get('groupOrder'), index)
+				: undefined;
 			views.push(Object.freeze({
 				type,
 				name: typeof name === 'string' ? name : undefined,
@@ -157,9 +161,31 @@ class BaseValidator {
 				order: order ? Object.freeze(order) : undefined,
 				sort,
 				groupBy,
+				groupOrder: groupOrder ? Object.freeze(groupOrder) : undefined,
 			}));
 		}
 		return views;
+	}
+
+	private groupOrder(value: unknown, index: number): BaseScalar[] | undefined {
+		if (!Array.isArray(value) || value.some(item =>
+			item !== null && typeof item !== 'string' && typeof item !== 'boolean'
+			&& (typeof item !== 'number' || !Number.isFinite(item)))) {
+			this.issue(`View ${index + 1} "groupOrder" must be a sequence of strings, numbers, booleans or null.`, this.lineOf('groupOrder'));
+			return undefined;
+		}
+		const keys = new Set<string>();
+		const values: BaseScalar[] = [];
+		for (const item of value as BaseScalar[]) {
+			const key = item === null || item === '' ? 'ungrouped' : `${typeof item}:${JSON.stringify(item)}`;
+			if (keys.has(key)) {
+				this.issue(`View ${index + 1} "groupOrder" cannot contain duplicate values.`, this.lineOf('groupOrder'));
+				continue;
+			}
+			keys.add(key);
+			values.push(item);
+		}
+		return values;
 	}
 
 	private filter(value: unknown, path: string): BaseFilter | undefined {

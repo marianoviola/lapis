@@ -123,6 +123,28 @@ describe('.base YAML parsing', () => {
 		}
 	});
 
+	it('parses a typed Kanban group order and rejects invalid or duplicate values', () => {
+		const result = parseBase([
+			'views:',
+			'  - type: kanban',
+			'    groupBy: status',
+			'    groupOrder: [done, active, 2, false, null]',
+		].join('\n'));
+		expect(result.diagnostics).toEqual([]);
+		expect(result.config?.views[0].groupOrder).toEqual(['done', 'active', 2, false, null]);
+		expect(Object.isFrozen(result.config?.views[0].groupOrder)).toBe(true);
+
+		for (const source of [
+			'views:\n  - type: table\n    groupOrder: [done]',
+			'views:\n  - type: kanban\n    groupOrder: done',
+			'views:\n  - type: kanban\n    groupOrder: [done, [active]]',
+			'views:\n  - type: kanban\n    groupOrder: [null, ""]',
+			'views:\n  - type: kanban\n    groupOrder: [active, active]',
+		]) {
+			expect(parseBase(source).config).toBeUndefined();
+		}
+	});
+
 	it('rejects malformed filter trees and unsupported file properties', () => {
 		const result = parseBase([
 			'filters:',

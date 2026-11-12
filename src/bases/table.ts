@@ -1,5 +1,5 @@
 import type { NoteRecord, PropertyValue } from '../domain/note';
-import type { BaseConfig, BasePropertyReference, BaseView } from './base';
+import type { BaseConfig, BasePropertyReference, BaseScalar, BaseView } from './base';
 import { queryBaseView, resolveBaseProperty } from './evaluate';
 import { parseBaseReference } from './expression';
 
@@ -77,7 +77,7 @@ export function projectBaseBoard(
 	for (const [index, note] of selected.entries()) {
 		const value = resolveBaseProperty(note, groupBy, config);
 		const empty = value === undefined || value === null || value === '';
-		const key = empty ? 'ungrouped' : `${typeof value}:${JSON.stringify(value)}`;
+		const key = baseGroupKey(value);
 		let group = groups.get(key);
 		if (!group) {
 			group = { key, label: empty ? 'No value' : formatValue(value), rows: [] };
@@ -85,7 +85,26 @@ export function projectBaseBoard(
 		}
 		group.rows.push(table.rows[index]);
 	}
-	return Object.freeze([...groups.values()].map(group => Object.freeze({ ...group, rows: Object.freeze(group.rows) })));
+	const declaredGroupBy = view.groupBy ?? { scope: 'note', name: 'status' };
+	const orderedGroups = groupBy.scope === declaredGroupBy.scope && groupBy.name === declaredGroupBy.name
+		? orderBaseGroups([...groups.values()], view.groupOrder ?? [])
+		: [...groups.values()];
+	return Object.freeze(orderedGroups.map(group => Object.freeze({ ...group, rows: Object.freeze(group.rows) })));
+}
+
+export function baseGroupKey(value: unknown): string {
+	return value === undefined || value === null || value === ''
+		? 'ungrouped'
+		: `${typeof value}:${JSON.stringify(value)}`;
+}
+
+function orderBaseGroups<T extends { readonly key: string }>(groups: T[], order: readonly BaseScalar[]): T[] {
+	const rank = new Map(order.map((value, index) => [baseGroupKey(value), index]));
+	return groups.sort((left, right) => {
+		const leftRank = rank.get(left.key), rightRank = rank.get(right.key);
+		if (leftRank === undefined) { return rightRank === undefined ? 0 : 1; }
+		return rightRank === undefined ? -1 : leftRank - rightRank;
+	});
 }
 
 export function formatValue(value: PropertyValue | undefined): string {

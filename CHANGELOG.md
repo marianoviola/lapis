@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.4 - 2026-11-12
+
+### Added
+
+- Custom Kanban column order through each view's `groupOrder` sequence, with
+  unlisted groups retaining their first-appearance order.
+- Wikilinks in scalar and list-valued Base properties render as safe, clickable
+  links when resolved; missing or ambiguous links remain labeled plain text.
+
 ## 0.1.3 - 2026-11-12
 
 ### Added

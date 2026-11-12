@@ -1,8 +1,13 @@
+import MarkdownIt from 'markdown-it';
 import type { NoteRecord, PropertyValue } from '../domain/note';
+import type { Resolution } from '../index/noteIndex';
+import { wikilinks, type WikilinkToken } from '../markdown/wikilinks';
 import type { BaseParseResult, BasePropertyReference } from './base';
 import { resolveBaseProperty } from './evaluate';
 import { futureDateProperties, type NoteReminder } from './reminders';
-import { formatValue, projectBaseTable } from './table';
+import { baseGroupKey, formatValue, projectBaseTable } from './table';
+
+const wikilinkMarkdown = new MarkdownIt('commonmark').use(wikilinks);
 
 export interface BasePreferences {
 	readonly view: number;
@@ -18,6 +23,7 @@ export interface BasePageInput {
 	readonly notes: readonly NoteRecord[];
 	readonly reminders: readonly NoteReminder[];
 	readonly preferences?: BasePreferences;
+	readonly resolveWikilink?: (target: string, fromUri: string) => Resolution;
 }
 
 export function renderBasePage(input: BasePageInput, nonce: string): string {
@@ -35,13 +41,34 @@ export function renderBasePage(input: BasePageInput, nonce: string): string {
 			}
 		}
 		return {
-			name: view.name ?? `View ${index + 1}`, type: view.type, groupBy: groupKey, columns: table.columns, groups,
+			name: view.name ?? `View ${index + 1}`, type: view.type, groupBy: groupKey,
+			groupOrder: view.groupOrder?.map(baseGroupKey), columns: table.columns, groups,
 			rows: table.rows.map(row => {
 				const note = notes.get(row.noteUri)!;
 				const reminder = reminders.get(row.noteUri);
+				const linkedValues: Record<string, readonly (readonly LinkedTextSegment[])[]> = Object.create(null);
+				for (const [columnIndex, column] of table.columns.entries()) {
+					const segments = linkedTextSegments(row.cells[columnIndex], note.id, input.resolveWikilink);
+					if (segments) {
+						linkedValues[column.key] = [segments];
+					}
+				}
+				for (const [name, value] of Object.entries(note.properties)) {
+					if (name === 'tags' || !Array.isArray(value)) { continue; }
+					const values = value.map(item => {
+						const text = formatListItem(item);
+						return typeof item === 'string'
+							? linkedTextSegments(item, note.id, input.resolveWikilink) ?? [{ text }]
+							: [{ text }];
+					});
+					if (values.some(segments => segments.some(segment => segment.uri || segment.state))) {
+						linkedValues[`note.${name}`] = values;
+					}
+				}
 				return {
 					...row, name: note.filename.replace(/\.md$/i, ''), path: note.relativePath, reminder: reminder?.due,
 					tags: projectTags(note.properties.tags),
+					linkedValues,
 					lists: Object.fromEntries(Object.entries(note.properties).flatMap(([name, value]) =>
 						name !== 'tags' && Array.isArray(value) ? [[`note.${name}`, value.map(formatListItem)]] : [])),
 					canRemind: !!reminder || futureDateProperties(note.properties).length > 0,
@@ -82,6 +109,56 @@ export function renderBasePage(input: BasePageInput, nonce: string): string {
 ${issues}<div id="content"></div><p id="empty" class="empty" hidden>No matching notes. Try another view or search.</p>
 <footer><span id="count" role="status"></span><span>Read-only view &middot; open a note to edit</span></footer>
 </main><script nonce="${nonce}">const data = ${data};\n${script}</script></body></html>`;
+}
+
+interface LinkedTextSegment {
+	readonly text: string;
+	readonly uri?: string;
+	readonly state?: 'missing' | 'ambiguous' | 'unavailable';
+	readonly title?: string;
+}
+
+function linkedTextSegments(
+	value: string,
+	fromUri: string,
+	resolveWikilink: BasePageInput['resolveWikilink'],
+): readonly LinkedTextSegment[] | undefined {
+	const children = wikilinkMarkdown.parseInline(value, {})[0]?.children ?? [];
+	if (!children.some(child => child.type === 'lapis_wikilink')) {
+		return undefined;
+	}
+	const segments: LinkedTextSegment[] = [];
+	for (const child of children) {
+		if (child.type !== 'lapis_wikilink') {
+			if (child.content) { segments.push({ text: child.content }); }
+			continue;
+		}
+		const link = child.meta as WikilinkToken;
+		const resolution = resolveWikilink?.(link.target, fromUri);
+		if (link.embed) {
+			segments.push({
+				text: link.label ?? link.target,
+				state: 'unavailable',
+				title: 'Embedded notes are not rendered in Base cards.',
+			});
+		} else if (resolution?.kind === 'resolved') {
+			segments.push({
+				text: link.label ?? `${resolution.note.title}${link.heading ? `#${link.heading}` : ''}`,
+				uri: resolution.note.id,
+				title: `Open ${resolution.note.relativePath}`,
+			});
+		} else {
+			const title = resolution?.kind === 'ambiguous'
+				? `Ambiguous wikilink: ${resolution.candidates.map(note => note.relativePath).join(', ')}`
+				: 'Unresolved wikilink';
+			segments.push({
+				text: link.label ?? `${link.target}${link.heading ? `#${link.heading}` : ''}`,
+				state: resolution?.kind ?? 'missing',
+				title,
+			});
+		}
+	}
+	return segments;
 }
 
 function escapeHtml(value: string): string {
@@ -132,6 +209,8 @@ tbody tr:last-child td{border-bottom:0}tbody tr:hover{background:var(--vscode-li
 .tag,.pill,.invalid-tag{display:inline-block;max-width:100%;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:2px 8px;font-size:11px}
 .tag{border-radius:10px;background:var(--vscode-textCodeBlock-background,#eef0f4);color:var(--vscode-textLink-foreground,#0677d4)}
 .pill{border-radius:5px;background:var(--vscode-textCodeBlock-background,#eef0f4);border:1px solid var(--vscode-widget-border,#dfe2e6)}
+.wiki-link{display:inline;padding:0;border:0;border-radius:0;color:var(--vscode-textLink-foreground,#0677d4);white-space:normal;text-align:inherit;text-decoration:underline;text-underline-offset:2px}
+.wiki-link:hover{text-decoration-thickness:2px}.wiki-unresolved{border-bottom:1px dotted var(--vscode-editorWarning-foreground,#9a6700)}
 .invalid-tag{border:1px dashed var(--vscode-editorWarning-foreground,#9a6700);border-radius:4px}
 .bell{padding:4px;margin-left:auto;color:var(--vscode-descriptionForeground,#737982)}.bell.scheduled{color:var(--vscode-textLink-foreground,#0677d4)}.badge{display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;background:var(--vscode-textCodeBlock-background,#eef0f4);border:1px solid var(--vscode-widget-border,#dfe2e6);padding:2px 7px;border-radius:5px;font-size:11px}
 .board{display:flex;align-items:flex-start;gap:16px;overflow-x:auto;padding-bottom:14px}.lane{flex:0 0 285px;background:var(--vscode-editorWidget-background,#f5f6f8);border:1px solid var(--vscode-widget-border,#e2e4e8);border-radius:8px;padding:10px;min-height:170px}
@@ -169,6 +248,23 @@ const script = `
 		node.setAttribute('aria-hidden','true'); node.innerHTML = paths[name]; return node;
 	};
 	const badge = key => /(?:status|channel|category)$/.test(key);
+	const richText = (segments, fallback) => {
+		const wrapper = element('span');
+		if (!segments) return element('span', fallback);
+		wrapper.append(...segments.map(segment => {
+			if (segment.uri) {
+				const link = element('button', segment.text, 'wiki-link');
+				link.type = 'button'; link.title = segment.title || 'Open linked note';
+				link.setAttribute('aria-label', link.title + ': ' + segment.text);
+				link.addEventListener('click', () => send('open-note', {uri:segment.uri}));
+				return link;
+			}
+			const text = element('span', segment.text, segment.state ? 'wiki-unresolved' : '');
+			if (segment.title) text.title = segment.title;
+			return text;
+		}));
+		return wrapper;
+	};
 	const valueNode = (value, key, row) => {
 		if (key === 'note.tags') {
 			if (!row.tags.length) return element('span', '\\u2014');
@@ -184,12 +280,16 @@ const script = `
 		if (Object.hasOwn(row.lists, key)) {
 			if (!row.lists[key].length) return element('span', '\\u2014');
 			const list = element('span', undefined, 'pills');
-			list.append(...row.lists[key].map(value => {
-				const pill = element('span', value, 'pill');
+			list.append(...row.lists[key].map((value,index) => {
+				const pill = element('span', undefined, 'pill');
 				pill.title = value;
+				pill.append(richText(row.linkedValues[key]?.[index], value));
 				return pill;
 			}));
 			return list;
+		}
+		if (row.linkedValues[key]) {
+			return richText(row.linkedValues[key][0], value || '\\u2014');
 		}
 		return element('span', value || '\\u2014', badge(key) && value ? 'badge' : '');
 	};
@@ -279,7 +379,16 @@ const script = `
 				if (!groups.has(value.key)) groups.set(value.key, {label:value.label,rows:[]});
 				groups.get(value.key).rows.push(row);
 			});
-			groups.forEach(group => {
+			const orderedGroups = [...groups.entries()];
+			if (state.groupBy === view.groupBy && view.groupOrder) {
+				const rank = new Map(view.groupOrder.map((key,index) => [key,index]));
+				orderedGroups.sort((left,right) => {
+					const leftRank = rank.get(left[0]), rightRank = rank.get(right[0]);
+					if (leftRank === undefined) return rightRank === undefined ? 0 : 1;
+					return rightRank === undefined ? -1 : leftRank - rightRank;
+				});
+			}
+			orderedGroups.forEach(([,group]) => {
 				const lane = element('section',undefined,'lane'), heading = element('h2',group.label);
 				heading.append(element('span',String(group.rows.length),'lane-count')); lane.append(heading);
 				group.rows.forEach(row => {

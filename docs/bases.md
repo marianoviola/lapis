@@ -41,6 +41,10 @@ Numbers and booleans keep their text values; null and empty-string elements show
 so the original structure is not flattened. Empty arrays display a dash.
 Long pills use ellipses with their complete value available on hover.
 Search, sorting and grouping still use the original property values.
+Wikilinks in scalar text and string array elements display their alias when
+present, otherwise the linked note title. Resolved links open the target note.
+Missing or ambiguous links remain plain text with an explanatory tooltip;
+embedded-note syntax is not rendered as an embed.
 
 The current implementation supports filtering, explicit sorting, a constrained
 formula language, and property display names. It does not yet support Timeline views, property
@@ -147,6 +151,7 @@ views:
   - type: kanban
     name: Editorial board
     groupBy: status
+    groupOrder: [In Progress, Backlog, Done, null]
     order: [due, file.name]
 ```
 
@@ -158,9 +163,13 @@ The grouping selector offers matching-note properties, configured columns,
 `file.name`, `file.folder` and the view's declared grouping property.
 Missing, null and empty values share **No value**. Other groups preserve typed
 values; arrays and maps are grouped by their complete JSON value, not split.
-Columns follow first appearance in the ordered results. Search hides empty
-columns. Cards open their notes; drag-and-drop and property mutations are not
-enabled.
+By default, columns follow first appearance in the ordered results. `groupOrder`
+can list string, number, boolean or null group values to display first, in the
+declared order; unlisted groups follow in their existing first-appearance order.
+Null and an empty string both refer to **No value**. This order applies when the
+board uses the view's declared `groupBy`; changing the toolbar's grouping property
+uses first appearance instead. Search hides empty columns. Cards open their notes;
+drag-and-drop and property mutations are not enabled.
 
 ## Date reminders
 

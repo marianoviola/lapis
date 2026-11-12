@@ -117,6 +117,7 @@ export class BaseViewProvider implements vscode.CustomTextEditorProvider, vscode
 			notes: this.workspace.notes.getNotes().filter(note => note.rootUri === state.rootUri),
 			reminders: this.reminders.getAll(),
 			preferences: this.preferences.get(state.document.uri.toString()),
+			resolveWikilink: (target, fromUri) => this.workspace.notes.resolve(target, fromUri),
 		}, randomBytes(16).toString('base64'));
 	}
 
