@@ -5,8 +5,8 @@
 <h1 align="center">Lapis — Markdown Workspaces</h1>
 
 A lightweight knowledge workspace for VS Code, built from ordinary Markdown
-files and YAML frontmatter. Keep your notes in plain text while using VS Code's
-editor, Explorer, search, and Markdown preview.
+files and YAML frontmatter. Navigate linked notes and build searchable table
+and Kanban views while keeping your notes in plain text.
 
 ## Key Features
 
@@ -15,9 +15,10 @@ editor, Explorer, search, and Markdown preview.
 - **Connect your knowledge** — insert wikilinks with a dedicated note and heading
   picker, then navigate with **Cmd/Ctrl+click** or **F12**. Theme-aware link
   styling distinguishes resolved, missing, and ambiguous targets.
-- **Organize notes into views** — use plain-text `.base` definitions to explore
-  note properties in read-only **table and Kanban views**, with search,
-  grouping, and property visibility controls.
+- **Build powerful note views** — define searchable, read-only table and Kanban
+  views in plain-text `.base` files. Filter recursively by folder, calculate
+  values with formulas, control sorting and column/group order, and follow
+  wikilinks in property values.
 - **Set note reminders** — schedule date reminders from a Base preview and receive
   VS Code notifications. Reminders persist across restarts in the same workspace;
   alerts are delivered while VS Code is running or on the next launch.
