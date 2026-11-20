@@ -10,6 +10,7 @@
     "type": "git",
     "url": "https://github.com/marianoviola/lapis.git"
   },
+  "homepage": "https://marianoviola.com/projects/lapis/",
   "packageManager": "pnpm@10.34.6",
   "engines": {
     "vscode": "^1.140.0"
