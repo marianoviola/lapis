@@ -44,7 +44,14 @@ Search, sorting and grouping still use the original property values.
 Wikilinks in scalar text and string array elements display their alias when
 present, otherwise the linked note title. Resolved links open the target note.
 Missing or ambiguous links remain plain text with an explanatory tooltip;
-embedded-note syntax is not rendered as an embed.
+embedded-note syntax is not rendered as an embed in Base cards.
+
+In a Markdown note, `![[Projects.base]]` renders every configured view from
+that Base inline. Tables and Kanban boards are read-only snapshots, and note
+names link to their source notes. A regular `[[Projects.base]]` remains a
+navigation link to the Base file. References can be vault-relative paths or
+unique Base filenames; ambiguous or missing references are shown as such.
+The Markdown preview refreshes when the Base file or indexed note data changes.
 
 The current implementation supports filtering, explicit sorting, a constrained
 formula language, and property display names. It does not yet support Timeline views, property

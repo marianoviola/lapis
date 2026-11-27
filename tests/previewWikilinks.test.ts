@@ -70,6 +70,20 @@ describe('preview wikilinks', () => {
 		expect(html).toContain('href="https://example.com"');
 	});
 
+	it('delegates Base embeds and ordinary Base links while leaving note embeds untouched', () => {
+		const notes = new NoteIndex(async () => undefined);
+		notes.upsert({
+			uri: 'file:///vault/Source.md', rootUri: 'file:///vault', relativePath: 'Source.md',
+			text: '', dirty: false,
+		});
+		const markdown = previewWikilinks(new MarkdownIt(), notes, env => typeof env === 'string' ? env : undefined,
+			() => '#', (target, _from, embed, label) =>
+				`<${embed ? 'div' : 'a'} data-target="${target}">${label ?? target}</${embed ? 'div' : 'a'}>`);
+
+		expect(markdown.render('![[Work.base|Tasks]] [[Work.base]] ![[Note.md]]', 'file:///vault/Source.md'))
+			.toContain('<div data-target="Work.base">Tasks</div> <a data-target="Work.base">Work.base</a> ![[Note.md]]');
+	});
+
 	it('resolves against current index state across target creation, ambiguity and deletion', () => {
 		const { add, notes, render } = fixture();
 		expect(render('[[Later]]')).toContain('wikilink-missing');

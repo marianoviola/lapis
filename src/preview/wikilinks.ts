@@ -9,7 +9,8 @@ export function headingFragment(note: NoteRecord, heading: string | undefined): 
 
 export function previewWikilinks(markdown: MarkdownIt, notes: NoteIndex,
 	source: (env: unknown) => string | undefined,
-	href: (from: string, note: NoteRecord, fragment: string) => string): MarkdownIt {
+	href: (from: string, note: NoteRecord, fragment: string) => string,
+	baseLink?: (target: string, from: string, embed: boolean, label: string | undefined) => string | undefined): MarkdownIt {
 	markdown.use(wikilinks, (env: unknown) => {
 		const from = source(env);
 		return !!from && !!notes.get(from);
@@ -19,7 +20,19 @@ export function previewWikilinks(markdown: MarkdownIt, notes: NoteIndex,
 		const link = token.meta as WikilinkToken;
 		const from = source(env);
 		const escape = markdown.utils.escapeHtml;
-		if (!from || !notes.get(from) || link.embed) {
+		if (!from || !notes.get(from)) {
+			return escape(token.content);
+		}
+		if (/\.base$/i.test(link.target) && baseLink) {
+			const rendered = baseLink(link.target, from, link.embed, link.label);
+			if (rendered !== undefined) {
+				return rendered;
+			}
+			return link.embed
+				? `<div class="lapis-inline-base-loading" role="status">Loading Base preview...</div>`
+				: `<span class="lapis-inline-base-loading" role="status">${escape(link.label ?? link.target)}</span>`;
+		}
+		if (link.embed) {
 			return escape(token.content);
 		}
 		const resolution = notes.resolve(link.target, from);

@@ -167,6 +167,8 @@ Reminders survive restarts in the same workspace; overdue alerts appear on the
 next launch, not while VS Code is closed. See
 [Creating `.base` views](docs/bases.md) for the supported YAML syntax, filters,
 ordering, grouping, reminders, and examples.
+In Markdown preview, embed a Base with `![[Projects.base]]`; a regular
+`[[Projects.base]]` remains a link to the Base file.
 
 ### Markdown Tables
 

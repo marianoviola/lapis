@@ -104,12 +104,16 @@ preserves source line maps, leaves documents untouched and does not suppress
 index diagnostics. This presentation rule applies to native Markdown previews,
 including documents outside indexed vaults.
 
-Preview wikilinks resolve only for indexed source documents. Resolved links
+Preview wikilinks resolve only for indexed source documents. Resolved note links
 emit encoded relative `href` and `data-href` attributes for native navigation;
 missing and ambiguous targets emit distinct, theme-aware non-link spans.
-Embeds remain raw text. Heading records include GitHub-style preview slugs,
-including the native duplicate-heading suffix behavior, separately from their
-exact-match heading text and editor line destinations.
+`![[path.base]]` loads the referenced Base asynchronously within the source
+note's vault, then renders its configured views as escaped, read-only HTML and
+refreshes the native preview when the Base or indexed note data changes.
+Ordinary `[[path.base]]` links remain navigable; non-Base embeds remain raw text.
+Heading records include GitHub-style preview slugs, including the native
+duplicate-heading suffix behavior, separately from their exact-match heading
+text and editor line destinations.
 
 The native adapter is tested against VS Code 1.140.0. Its undocumented
 `currentDocument` environment field is available at rendering, but absent during

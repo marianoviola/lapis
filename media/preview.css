@@ -90,3 +90,93 @@ mark {
 .lapis-wikilink:hover {
 	color: var(--vscode-textLink-activeForeground);
 }
+
+.lapis-inline-base {
+	margin: 1.25em 0;
+	padding: 1em;
+	border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+	border-radius: 6px;
+	background: var(--vscode-editor-background);
+}
+
+.lapis-inline-base > h3,
+.lapis-inline-base-view > h4,
+.lapis-inline-base-group > h5 {
+	margin: 0 0 0.65em;
+}
+
+.lapis-inline-base-view + .lapis-inline-base-view {
+	margin-top: 1.25em;
+}
+
+.lapis-inline-base-scroll {
+	overflow-x: auto;
+}
+
+.lapis-inline-base table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.lapis-inline-base th,
+.lapis-inline-base td {
+	padding: 0.45em 0.65em;
+	border: 1px solid var(--vscode-panel-border);
+	text-align: left;
+	vertical-align: top;
+}
+
+.lapis-inline-base th {
+	background: var(--vscode-editor-selectionBackground);
+}
+
+.lapis-inline-base-board {
+	display: flex;
+	gap: 0.75em;
+	overflow-x: auto;
+	align-items: flex-start;
+}
+
+.lapis-inline-base-group {
+	min-width: 12em;
+	max-width: 22em;
+	padding: 0.65em;
+	border-radius: 4px;
+	background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+}
+
+.lapis-inline-base-card {
+	margin: 0.5em 0;
+	padding: 0.65em;
+	border: 1px solid var(--vscode-panel-border);
+	border-radius: 4px;
+	background: var(--vscode-editor-background);
+}
+
+.lapis-inline-base-card > div {
+	display: flex;
+	justify-content: space-between;
+	gap: 0.75em;
+	margin-top: 0.35em;
+}
+
+.lapis-inline-base-card > div > span:first-child,
+.lapis-inline-base-loading,
+.lapis-inline-base-diagnostics {
+	color: var(--vscode-descriptionForeground);
+}
+
+.lapis-inline-base-diagnostics {
+	padding: 0.75em;
+	border-left: 3px solid var(--vscode-editorError-foreground);
+	background: var(--vscode-inputValidation-errorBackground);
+}
+
+.lapis-inline-base-diagnostics ul {
+	margin-bottom: 0;
+}
+
+.lapis-inline-base-error {
+	color: var(--vscode-editorError-foreground);
+	text-decoration: underline dotted;
+}
