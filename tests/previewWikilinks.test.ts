@@ -77,11 +77,11 @@ describe('preview wikilinks', () => {
 			text: '', dirty: false,
 		});
 		const markdown = previewWikilinks(new MarkdownIt(), notes, env => typeof env === 'string' ? env : undefined,
-			() => '#', (target, _from, embed, label) =>
-				`<${embed ? 'div' : 'a'} data-target="${target}">${label ?? target}</${embed ? 'div' : 'a'}>`);
+			() => '#', (target, _from, embed, label, view) =>
+				`<${embed ? 'div' : 'a'} data-target="${target}"${view ? ` data-view="${view}"` : ''}>${label ?? target}</${embed ? 'div' : 'a'}>`);
 
-		expect(markdown.render('![[Work.base|Tasks]] [[Work.base]] ![[Note.md]]', 'file:///vault/Source.md'))
-			.toContain('<div data-target="Work.base">Tasks</div> <a data-target="Work.base">Work.base</a> ![[Note.md]]');
+		expect(markdown.render('![[Work.base#Kanban|Tasks]] [[Work.base]] ![[Note.md]]', 'file:///vault/Source.md'))
+			.toContain('<div data-target="Work.base" data-view="Kanban">Tasks</div> <a data-target="Work.base">Work.base</a> ![[Note.md]]');
 	});
 
 	it('resolves against current index state across target creation, ambiguity and deletion', () => {

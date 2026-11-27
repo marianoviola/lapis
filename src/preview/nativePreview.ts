@@ -191,7 +191,7 @@ export function nativePreview(workspace: WorkspaceIndex, output: vscode.LogOutpu
 				const destination = relativeHref(from, vscode.Uri.parse(note.id));
 				// A relative prefix prevents filenames containing ':' becoming URI schemes.
 				return `${destination}${fragment ? `#${encodeURIComponent(fragment)}` : ''}`;
-			}, (target, from, embed, label) => {
+			}, (target, from, embed, label, view) => {
 				const note = workspace.notes.get(from);
 				if (!note) {
 					return undefined;
@@ -222,7 +222,7 @@ export function nativePreview(workspace: WorkspaceIndex, output: vscode.LogOutpu
 				const notes = workspace.notes.getNotes().filter(candidate => candidate.rootUri === note.rootUri);
 				const title = label ?? file.relativePath.replace(/\.base$/i, '');
 				return renderInlineBase(parseBase(file.text), title, notes,
-					targetNote => relativeHref(from, vscode.Uri.parse(targetNote.id)));
+					targetNote => relativeHref(from, vscode.Uri.parse(targetNote.id)), view);
 			});
 		},
 		dispose() {

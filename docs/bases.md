@@ -46,11 +46,14 @@ present, otherwise the linked note title. Resolved links open the target note.
 Missing or ambiguous links remain plain text with an explanatory tooltip;
 embedded-note syntax is not rendered as an embed in Base cards.
 
-In a Markdown note, `![[Projects.base]]` renders every configured view from
-that Base inline. Tables and Kanban boards are read-only snapshots, and note
-names link to their source notes. A regular `[[Projects.base]]` remains a
-navigation link to the Base file. References can be vault-relative paths or
-unique Base filenames; ambiguous or missing references are shown as such.
+In a Markdown note, `![[Projects.base]]` renders the first configured view from
+that Base inline. Select another view by name with
+`![[Projects.base#Recently touched]]`; names are matched case-insensitively.
+Unnamed views can be selected as `View 1`, `View 2`, and so on. Tables and
+Kanban boards are read-only snapshots, and note names link to their source
+notes. A regular `[[Projects.base]]` remains a navigation link to the Base
+file. References can be vault-relative paths or unique Base filenames;
+ambiguous or missing references are shown as such.
 The Markdown preview refreshes when the Base file or indexed note data changes.
 
 The current implementation supports filtering, explicit sorting, a constrained

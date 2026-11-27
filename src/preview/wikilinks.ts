@@ -10,7 +10,8 @@ export function headingFragment(note: NoteRecord, heading: string | undefined): 
 export function previewWikilinks(markdown: MarkdownIt, notes: NoteIndex,
 	source: (env: unknown) => string | undefined,
 	href: (from: string, note: NoteRecord, fragment: string) => string,
-	baseLink?: (target: string, from: string, embed: boolean, label: string | undefined) => string | undefined): MarkdownIt {
+	baseLink?: (target: string, from: string, embed: boolean, label: string | undefined,
+		view: string | undefined) => string | undefined): MarkdownIt {
 	markdown.use(wikilinks, (env: unknown) => {
 		const from = source(env);
 		return !!from && !!notes.get(from);
@@ -24,7 +25,7 @@ export function previewWikilinks(markdown: MarkdownIt, notes: NoteIndex,
 			return escape(token.content);
 		}
 		if (/\.base$/i.test(link.target) && baseLink) {
-			const rendered = baseLink(link.target, from, link.embed, link.label);
+			const rendered = baseLink(link.target, from, link.embed, link.label, link.heading);
 			if (rendered !== undefined) {
 				return rendered;
 			}

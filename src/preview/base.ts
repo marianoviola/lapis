@@ -7,6 +7,7 @@ export function renderInlineBase(
 	title: string,
 	notes: readonly NoteRecord[],
 	href: (note: NoteRecord) => string,
+	selectedView?: string,
 ): string {
 	const escape = escapeHtml;
 	if (result.diagnostics.length) {
@@ -18,14 +19,20 @@ export function renderInlineBase(
 	if (!config || !config.views.length) {
 		return `<section class="lapis-inline-base"><h3>${escape(title)}</h3><p>No views are defined.</p></section>`;
 	}
+	const view = selectedView === undefined
+		? { view: config.views[0], name: config.views[0].name ?? 'View 1' }
+		: config.views.map((candidate, index) => ({
+			view: candidate,
+			name: candidate.name ?? `View ${index + 1}`,
+		})).find(candidate => candidate.name.toLocaleLowerCase() === selectedView.trim().toLocaleLowerCase());
+	if (!view) {
+		return `<section class="lapis-inline-base"><h3>${escape(title)}</h3><p>View "${escape(selectedView ?? '')}" not found.</p></section>`;
+	}
 	const notesById = new Map(notes.map(note => [note.id, note]));
-	const views = config.views.map((view, index) => {
-		const name = view.name ?? `View ${index + 1}`;
-		return view.type === 'table'
-			? renderTable(config, view, notes, notesById, name, href)
-			: renderBoard(config, view, notes, notesById, name, href);
-	}).join('');
-	return `<section class="lapis-inline-base"><h3>${escape(title)}</h3>${views}</section>`;
+	const content = view.view.type === 'table'
+		? renderTable(config, view.view, notes, notesById, view.name, href)
+		: renderBoard(config, view.view, notes, notesById, view.name, href);
+	return `<section class="lapis-inline-base"><h3>${escape(title)}</h3>${content}</section>`;
 }
 
 function renderTable(

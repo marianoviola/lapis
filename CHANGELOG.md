@@ -1,12 +1,18 @@
 # Changelog
 
+## 1.1.1 - 2026-11-27
+
+### Changed
+
+- Base embeds render the first configured view by default and support selecting
+  a view by name with `![[Projects.base#View name]]`.
+
 ## 1.1.0 - 2026-11-27
 
 ### Added
 
 - Inline rendering of linked `.base` views in Markdown preview with
-  `![[Projects.base]]`. All configured table and Kanban views render as
-  read-only snapshots, and regular `[[Projects.base]]` links remain navigable.
+  `![[Projects.base]]`. Regular `[[Projects.base]]` links remain navigable.
 
 ## 0.1.4 - 2026-11-12
 
